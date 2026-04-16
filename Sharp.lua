@@ -8,6 +8,7 @@ local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
+-- ==================== SETTINGS ====================
 local settings = {
     -- Aimbot
     silentAim = false,
@@ -35,6 +36,160 @@ local settings = {
     targetHighlight = false,
     knifeTracers = false,
 }
+
+-- ==================== REQUIRE MODULES ====================
+local m_GameCharacterController = require(ReplicatedStorage.Client.Controllers.GameCharacterController)
+local m_CombatClient = require(ReplicatedStorage.Client.Madwork.CombatClient)
+local m_BackpackClient = require(ReplicatedStorage.Client.Madwork.BackpackClient)
+local m_ToolUsageClient = require(ReplicatedStorage.Client.Madwork.ToolUsageClient)
+local m_MadFSM = require(ReplicatedStorage.Shared.Madwork.MadFSM)
+local m_MadworkCaster = require(ReplicatedStorage.Shared.Madwork.MadworkCaster)
+
+-- (Keep all your existing functions: IsVisible, GetClosestHead, silent aim hook, infinite ammo, FSM patching, etc.)
+-- ... [Paste all the original code from "Silent Aim" down to the end of the Render loop (before Venyx UI) here] ...
+
+-- ==================== MOBILE TOGGLE BUTTON + DRAGGABLE UI ====================
+
+-- Create ScreenGui
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "SharpMobileUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+-- Main UI Frame (will contain Venyx)
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 520, 0, 380)  -- Adjust size if needed
+MainFrame.Position = UDim2.new(0.5, -260, 0.5, -190)
+MainFrame.BackgroundTransparency = 1
+MainFrame.Parent = ScreenGui
+
+-- Make MainFrame draggable (mouse + touch support)
+local dragging = false
+local dragInput
+local dragStart
+local startPos
+
+local function updateDrag(input)
+    local delta = input.Position - dragStart
+    MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+end
+
+MainFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
+        
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+MainFrame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        updateDrag(input)
+    end
+end)
+
+-- Toggle Button (draggable circle)
+local ToggleButton = Instance.new("TextButton")
+ToggleButton.Name = "ToggleButton"
+ToggleButton.Size = UDim2.new(0, 60, 0, 60)
+ToggleButton.Position = UDim2.new(0, 20, 0.5, -30)
+ToggleButton.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+ToggleButton.Text = "SHARP"
+ToggleButton.TextColor3 = Color3.new(1,1,1)
+ToggleButton.TextScaled = true
+ToggleButton.Font = Enum.Font.GothamBold
+ToggleButton.Parent = ScreenGui
+
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(1, 0)
+corner.Parent = ToggleButton
+
+-- Make Toggle Button draggable
+local tbDragging = false
+local tbDragStart
+local tbStartPos
+
+ToggleButton.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        tbDragging = true
+        tbDragStart = input.Position
+        tbStartPos = ToggleButton.Position
+    end
+end)
+
+ToggleButton.InputChanged:Connect(function(input)
+    if (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) and tbDragging then
+        local delta = input.Position - tbDragStart
+        ToggleButton.Position = UDim2.new(tbStartPos.X.Scale, tbStartPos.X.Offset + delta.X, tbStartPos.Y.Scale, tbStartPos.Y.Offset + delta.Y)
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        tbDragging = false
+    end
+end)
+
+-- Toggle function
+local uiVisible = true
+local function toggleUI()
+    uiVisible = not uiVisible
+    MainFrame.Visible = uiVisible
+end
+
+ToggleButton.MouseButton1Click:Connect(toggleUI)
+ToggleButton.TouchTap:Connect(toggleUI)  -- Better mobile support
+
+-- ==================== VENYX UI (inside MainFrame) ====================
+local Venyx = loadstring(game:HttpGet("https://raw.githubusercontent.com/Stefanuk12/Venyx-UI-Library/main/source2.lua"))()
+local UI = Venyx.new({ title = "SHARP" })
+
+-- Put Venyx GUI inside our draggable MainFrame (this is a bit hacky but works for most executors)
+-- Note: Venyx creates its own ScreenGui, so we move its main frame
+task.wait(0.5)  -- Give Venyx time to create UI
+for _, v in pairs(game:GetService("CoreGui"):GetDescendants()) do
+    if v:IsA("ScreenGui") and v.Name:find("Venyx") then
+        for _, child in pairs(v:GetChildren()) do
+            if child:IsA("Frame") then
+                child.Parent = MainFrame
+                break
+            end
+        end
+        v:Destroy()
+        break
+    end
+end
+
+-- Now add your pages/sections as before
+local CombatPage = UI:addPage({ title = "Combat", icon = 5012544693 })
+local VisualPage = UI:addPage({ title = "Visuals", icon = 5012544693 })
+
+-- (Paste all your Aimbot, Combat, ESPSection, etc. toggles, sliders, colorpickers exactly as they were)
+
+-- Example (keep all your original UI code here):
+local Aimbot = CombatPage:addSection({ title = "Aimbot" })
+Aimbot:addToggle({ title = "Silent Aim", callback = function(v) settings.silentAim = v end })
+-- ... add the rest of your UI elements ...
+
+UI:SelectPage({ page = UI.pages[1], toggle = true })
+
+-- Make sure MainFrame is visible at start
+MainFrame.Visible = true
+
+print("Sharp exploit loaded with mobile toggle + draggable UI!")}
 
 local m_GameCharacterController = require(ReplicatedStorage.Client.Controllers.GameCharacterController)
 local m_CombatClient = require(ReplicatedStorage.Client.Madwork.CombatClient)
