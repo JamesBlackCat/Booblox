@@ -1,3 +1,4 @@
+-- SHARP Exploit - Delta Executor Optimized Version
 repeat task.wait() until game:IsLoaded()
 
 local Players = game:GetService("Players")
@@ -10,31 +11,128 @@ local Camera = workspace.CurrentCamera
 
 -- ==================== SETTINGS ====================
 local settings = {
-    -- Aimbot
-    silentAim = false,
-    triggerBot = false,
-    autoShoot = false,
-    maxCharge = false,
-    fov = 200,
-    -- Combat
-    instantFireRate = false,
-    infiniteAmmo = false,
-    -- ESP
-    espEnabled = false,
-    espEnemyOnly = false,
-    espTeamOnly = false,
-    espBoxes = true,
-    espNames = true,
-    espDistance = true,
-    espHealth = true,
-    espTracers = false,
+    silentAim = false, triggerBot = false, autoShoot = false, maxCharge = false, fov = 200,
+    instantFireRate = false, infiniteAmmo = false,
+    espEnabled = false, espEnemyOnly = false, espTeamOnly = false,
+    espBoxes = true, espNames = true, espDistance = true, espHealth = true, espTracers = false,
     espMaxDistance = 1000,
     espEnemyColor = Color3.fromRGB(255, 50, 50),
     espTeamColor = Color3.fromRGB(50, 255, 50),
-    -- Visuals
-    fovCircle = true,
-    targetHighlight = false,
-    knifeTracers = false,
+    fovCircle = true, targetHighlight = false, knifeTracers = false,
+}
+
+-- ==================== CORE FUNCTIONS (paste your original code here) ====================
+-- Paste everything from your original script starting AFTER the settings table:
+-- rayParams, IsVisible, GetClosestHead, silent aim hook, infinite ammo, FSM patching, ESP functions, knife tracers, main Heartbeat loop, TryFire, etc.
+
+-- (Keep all combat/ESP logic exactly the same — only the UI part is changed below)
+
+-- ==================== DELTA-FRIENDLY MOBILE UI ====================
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "SharpDeltaUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+-- Draggable Toggle Button
+local ToggleBtn = Instance.new("TextButton")
+ToggleBtn.Size = UDim2.new(0, 65, 0, 65)
+ToggleBtn.Position = UDim2.new(0, 25, 0.35, 0)
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+ToggleBtn.Text = "SHARP"
+ToggleBtn.TextColor3 = Color3.new(1, 1, 1)
+ToggleBtn.TextScaled = true
+ToggleBtn.Font = Enum.Font.GothamBold
+ToggleBtn.Parent = ScreenGui
+
+Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(0.5, 0)
+local stroke = Instance.new("UIStroke", ToggleBtn)
+stroke.Thickness = 3
+stroke.Color = Color3.new(1,1,1)
+
+-- Simple & Reliable Dragging (works well on Delta mobile)
+local isDragging = false
+local dragStartPos, buttonStartPos
+
+ToggleBtn.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+        isDragging = true
+        dragStartPos = input.Position
+        buttonStartPos = ToggleBtn.Position
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if isDragging and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement) then
+        local delta = input.Position - dragStartPos
+        ToggleBtn.Position = UDim2.new(
+            buttonStartPos.X.Scale,
+            buttonStartPos.X.Offset + delta.X,
+            buttonStartPos.Y.Scale,
+            buttonStartPos.Y.Offset + delta.Y
+        )
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+        isDragging = false
+    end
+end)
+
+-- Load Venyx safely for Delta
+task.wait(0.8) -- Small delay helps stability on mobile executors
+
+local success, VenyxLib = pcall(function()
+    return loadstring(game:HttpGet("https://raw.githubusercontent.com/Stefanuk12/Venyx-UI-Library/main/source2.lua"))()
+end)
+
+if not success then
+    warn("Failed to load Venyx UI. Check your internet or executor.")
+    return
+end
+
+local UI = VenyxLib.new({title = "SHARP"})
+
+-- Add your pages and sections (copy from your original)
+local CombatPage = UI:addPage({title = "Combat", icon = 5012544693})
+local VisualPage = UI:addPage({title = "Visuals", icon = 5012544693})
+
+local AimbotSec = CombatPage:addSection({title = "Aimbot"})
+AimbotSec:addToggle({title = "Silent Aim", callback = function(v) settings.silentAim = v end})
+AimbotSec:addToggle({title = "Triggerbot (Knife)", callback = function(v) settings.triggerBot = v end})
+AimbotSec:addToggle({title = "Auto Shoot (Knife)", callback = function(v) settings.autoShoot = v end})
+AimbotSec:addToggle({title = "Max Charge", callback = function(v) settings.maxCharge = v end})
+AimbotSec:addSlider({title = "FOV", default = 200, min = 50, max = 600, callback = function(v) settings.fov = v end})
+
+local CombatSec = CombatPage:addSection({title = "Combat"})
+CombatSec:addToggle({title = "Instant Fire Rate", callback = function(v) settings.instantFireRate = v end})
+CombatSec:addToggle({title = "Infinite Ammo", callback = function(v) settings.infiniteAmmo = v end})
+CombatSec:addButton({title = "Throw At Target Now", callback = TryFire})
+
+-- Add the rest of your ESP toggles, sliders, color pickers here exactly as in your original script...
+
+UI:SelectPage({page = UI.pages[1], toggle = true})
+
+-- Toggle UI with the button
+local uiOpen = true
+local function toggleUI()
+    uiOpen = not uiOpen
+    -- Venyx doesn't have built-in hide, so we hide the main container (common workaround)
+    pcall(function()
+        for _, obj in pairs(UI) do
+            if typeof(obj) == "Instance" and obj:IsA("Frame") then
+                obj.Visible = uiOpen
+            end
+        end
+    end)
+end
+
+ToggleBtn.MouseButton1Click:Connect(toggleUI)
+ToggleBtn.TouchTap:Connect(toggleUI)  -- Better for mobile touch
+
+print("✅ SHARP loaded successfully for Delta Executor!")
+print("Tap the red SHARP button to open/close the menu. Drag it anywhere.")    knifeTracers = false,
 }
 
 -- ==================== REQUIRE MODULES ====================
