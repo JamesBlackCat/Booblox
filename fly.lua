@@ -40,6 +40,7 @@ local State = {
     lerpSpeed      = 0,
     shiftlock      = false,   -- character body follows camera yaw; mouse locked on PC
     autoPilot      = false,   -- auto-pilot: fly forward with no input needed
+    autoPilotDir   = Vector3.new(0, 0, -1), -- direction captured when auto-pilot is turned on
     freecam        = false,   -- spectator / freecam mode
 }
 
@@ -304,9 +305,9 @@ end
 local mobileStick = Vector2.zero   -- X = strafe, Y = forward
 
 local function getMoveDir()
-    -- Auto-pilot: always fly in camera look direction, no input needed
+    -- Auto-pilot: fly in the direction that was captured when auto-pilot was enabled
     if State.autoPilot then
-        return Camera.CFrame.LookVector.Unit
+        return State.autoPilotDir
     end
 
     local camCF   = Camera.CFrame
@@ -492,15 +493,6 @@ local function startFly()
     if S.flyAnimEnabled and tracks.fly then
         tracks.fly:Play()
     end
-    -- Auto-pilot on start: immediately fly forward for the configured duration
-    if S.autoPilotOnStart then
-        State.autoPilot = true
-        task.delay(S.autoPilotOnStartDur, function()
-            if State.autoPilot and State.flying then
-                State.autoPilot = false
-            end
-        end)
-    end
 end
 
 local function stopFly()
@@ -511,6 +503,24 @@ local function stopFly()
     if State.floating and S.flyAnimEnabled and tracks.floatIdle then
         tracks.floatIdle:Play()
     end
+end
+
+-- ============================================================
+--  AUTO-PILOT TOGGLE
+--  Captures the character's current facing direction the moment
+--  auto-pilot is turned ON so the flight direction is locked to
+--  where the character WAS facing, not where the camera looks.
+-- ============================================================
+local function setAutoPilot(on)
+    if on and not State.autoPilot then
+        local _, hrp = getCharParts()
+        if hrp and hrp.CFrame.LookVector.Magnitude > 0.01 then
+            State.autoPilotDir = hrp.CFrame.LookVector.Unit
+        else
+            State.autoPilotDir = Camera.CFrame.LookVector.Unit
+        end
+    end
+    State.autoPilot = on
 end
 
 -- ============================================================
@@ -595,10 +605,11 @@ RunService.Heartbeat:Connect(function(dt)
     -- -------------------------------------------------------
     local targetCF
 
-    -- When flying OR shiftlock is on, character faces the FULL camera direction
-    -- (including vertical pitch) so the body tilts up/down with the camera.
+    -- When shiftlock is on the body faces the camera direction.
+    -- While just flying (without shiftlock) the camera is FREE — you can look
+    -- around without changing where the character is going.
     local facingDir
-    if State.shiftlock or State.flying then
+    if State.shiftlock then
         local camLook = Camera.CFrame.LookVector
         if camLook.Magnitude > 0.01 then
             facingDir = camLook.Unit
@@ -960,7 +971,7 @@ UserInputService.InputBegan:Connect(function(input, gpe)
     -- Auto-pilot toggle
     if k == S.autoPilotKey then
         if State.floating then
-            State.autoPilot = not State.autoPilot
+            setAutoPilot(not State.autoPilot)
         end
     end
 end)
@@ -1079,41 +1090,29 @@ local function makeButton(name, initPos, initSize, label, color, callback)
     frame.Name                  = name
     frame.Size                  = initSize
     frame.Position              = initPos
-    frame.BackgroundColor3      = color
-    frame.BackgroundTransparency = 0.1
+    frame.BackgroundTransparency = 1
     frame.BorderSizePixel       = 0
     frame.Active                = true
     frame.Parent                = SG
 
-    do local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(0.18, 0); c.Parent = frame end
-    do
-        local s = Instance.new("UIStroke")
-        s.Color        = Color3.new(1,1,1)
-        s.Transparency = 0.65
-        s.Thickness    = 1.5
-        s.Parent       = frame
-    end
-
-    -- Wing icon
+    -- Full-frame image (replaces the old wing icon + text style)
     local icon = Instance.new("ImageLabel")
-    icon.Size               = UDim2.new(0.52, 0, 0.52, 0)
-    icon.Position           = UDim2.new(0.5, 0, 0.22, 0)
-    icon.AnchorPoint        = Vector2.new(0.5, 0)
+    icon.Size               = UDim2.new(1, 0, 1, 0)
+    icon.Position           = UDim2.new(0, 0, 0, 0)
+    icon.AnchorPoint        = Vector2.new(0, 0)
     icon.BackgroundTransparency = 1
-    icon.Image              = WING_ICON
-    icon.ImageColor3        = Color3.new(1,1,1)
+    icon.Image              = ""
+    icon.ImageColor3        = Color3.new(1, 1, 1)
     icon.ScaleType          = Enum.ScaleType.Fit
     icon.Parent             = frame
 
+    -- Hidden label kept so existing code referencing .lbl doesn't error
     local lbl = Instance.new("TextLabel")
     lbl.Name                = "Lbl"
-    lbl.Size                = UDim2.new(1, 0, 0.36, 0)
-    lbl.Position            = UDim2.new(0, 0, 0.64, 0)
+    lbl.Size                = UDim2.new(1, 0, 0, 0)
     lbl.BackgroundTransparency = 1
-    lbl.Text                = label
-    lbl.TextColor3          = Color3.new(1,1,1)
-    lbl.TextScaled          = true
-    lbl.Font                = Enum.Font.GothamBold
+    lbl.Text                = ""
+    lbl.TextTransparency    = 1
     lbl.Parent              = frame
 
     -- --------------------------------------------------------
@@ -1272,7 +1271,7 @@ autoPilotBtnObj = makeButton("AutoPilotBtn",
     function()
         if not State.enabled then return end
         if not State.floating then return end
-        State.autoPilot = not State.autoPilot
+        setAutoPilot(not State.autoPilot)
     end)
 autoPilotBtnObj.frame.Visible = false
 
@@ -1286,27 +1285,32 @@ RunService.Heartbeat:Connect(function()
     shiftlockBtnObj.frame.Visible  = State.enabled and State.floating
     autoPilotBtnObj.frame.Visible  = State.enabled and State.floating
 
-    floatBtnObj.lbl.Text = State.floating and "Land [F]" or "Float [F]"
-    flyBtnObj.lbl.Text   = State.flying   and "Stop [G]" or "Fly [G]"
-    shiftlockBtnObj.lbl.Text = State.shiftlock and "Look ON [V]" or "Look [V]"
-    shiftlockBtnObj.frame.BackgroundColor3 = State.shiftlock
-        and Color3.fromRGB(120, 20, 180)
-        or  Color3.fromRGB(70, 20, 120)
-    autoPilotBtnObj.lbl.Text = State.autoPilot and "Auto ON [H]" or "Auto [H]"
-    autoPilotBtnObj.frame.BackgroundColor3 = State.autoPilot
-        and Color3.fromRGB(0, 180, 220)
-        or  Color3.fromRGB(10, 100, 140)
+    -- Float button: off = Float image, on = Float-on image
+    floatBtnObj.icon.Image = State.floating
+        and "rbxassetid://99282157892103"
+        or  "rbxassetid://89324964776192"
 
-    if State.boostCD then
-        boostBtnObj.lbl.Text               = "CD " .. State.boostCDLeft .. "s"
-        boostBtnObj.frame.BackgroundColor3 = Color3.fromRGB(100, 55, 10)
-    elseif State.boostActive then
-        boostBtnObj.lbl.Text               = "BOOST!"
-        boostBtnObj.frame.BackgroundColor3 = Color3.fromRGB(220, 170, 0)
+    -- Fly button: not flying = idle-on image, flying = fly-on image
+    flyBtnObj.icon.Image = State.flying
+        and "rbxassetid://83365742847607"
+        or  "rbxassetid://98943386790955"
+
+    -- Boost button: active or on cooldown = boost-on image, ready = boost-off image
+    if State.boostCD or State.boostActive then
+        boostBtnObj.icon.Image = "rbxassetid://100154015228522"
     else
-        boostBtnObj.lbl.Text               = "Boost [X]"
-        boostBtnObj.frame.BackgroundColor3 = Color3.fromRGB(185, 80, 10)
+        boostBtnObj.icon.Image = "rbxassetid://97132627168916"
     end
+
+    -- Look / Shiftlock button
+    shiftlockBtnObj.icon.Image = State.shiftlock
+        and "rbxassetid://75499482931389"
+        or  "rbxassetid://113215936327929"
+
+    -- Auto-Pilot button
+    autoPilotBtnObj.icon.Image = State.autoPilot
+        and "rbxassetid://76493728917963"
+        or  "rbxassetid://76493728917963"
 end)
 
 -- ============================================================
