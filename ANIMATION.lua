@@ -23,17 +23,28 @@ FEATURES:
 -- ════════════════════════════════════════════════════════
 --  SERVICES
 -- ════════════════════════════════════════════════════════
-local TweenService       = game:GetService("TweenService")
-local UserInputService   = game:GetService("UserInputService")
-local RunService         = game:GetService("RunService")
-local Players            = game:GetService("Players")
-local InsertService      = game:GetService("InsertService")
-local ContentProvider    = game:GetService("ContentProvider")
-local MarketplaceService = game:GetService("MarketplaceService")
-local StarterGui         = game:GetService("StarterGui")
-local ReplicatedStorage  = game:GetService("ReplicatedStorage")
+local TweenService      = game:GetService("TweenService")
+local UserInputService  = game:GetService("UserInputService")
+local RunService        = game:GetService("RunService")
+local Players           = game:GetService("Players")
+local InsertService     = game:GetService("InsertService")
+local StarterGui        = game:GetService("StarterGui")
 
+-- ── LocalPlayer (works in both LocalScript and executor) ──
 local LocalPlayer = Players.LocalPlayer
+if not LocalPlayer then
+    -- Executor sometimes needs a tiny wait before LocalPlayer is ready
+    Players:GetPropertyChangedSignal("LocalPlayer"):Wait()
+    LocalPlayer = Players.LocalPlayer
+end
+if not LocalPlayer then error("[AnimStudio] Cannot find LocalPlayer. Run this inside a game session.") end
+
+-- Camera guard
+local camera = workspace.CurrentCamera
+if not camera then
+    workspace:GetPropertyChangedSignal("CurrentCamera"):Wait()
+    camera = workspace.CurrentCamera
+end
 
 -- ════════════════════════════════════════════════════════
 --  MODULE: UIUtils
@@ -370,6 +381,10 @@ local UIUtils = (function()
     end
 
     function M.IsTouch()
+        return UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+    end
+
+    function M.IsMobile()
         return UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
     end
 
@@ -727,54 +742,82 @@ local InputHandler = (function()
 end)()
 
 -- ════════════════════════════════════════════════════════
---  MODULE: SaveLoad  (client-side only in LocalScript)
+--  MODULE: SaveLoad  (executor-compatible, no server deps)
 -- ════════════════════════════════════════════════════════
 local SaveLoad = (function()
     local M = {}
-    local _cache, _dirty = {}, {}
-    local AUTO_SAVE_INTERVAL = 60
-    local _remotes = nil
+    local _cache = {}
 
-    M.Keys = {AnimSlots="AnimStudio_Slots_v1",Packs="AnimStudio_Packs_v1",Folders="AnimStudio_Folders_v1",
-              Favorites="AnimStudio_Favorites_v1",FloatEmotes="AnimStudio_Float_v1",
-              UIState="AnimStudio_UIState_v1",Timeline="AnimStudio_Timeline_v1"}
+    -- File name used when executor filesystem API is available
+    local SAVE_FILE = "AnimStudio_save.json"
 
-    local function GetRemotes()
-        if _remotes then return _remotes end
-        _remotes = ReplicatedStorage:FindFirstChild("AnimStudioRemotes")
-        return _remotes
+    -- Tiny JSON encoder/decoder (no HttpService needed)
+    local function jsonEncode(v)
+        local t = type(v)
+        if t == "nil"     then return "null"
+        elseif t == "boolean" then return tostring(v)
+        elseif t == "number"  then return tostring(v)
+        elseif t == "string"  then
+            return '"' .. v:gsub('\\','\\\\'):gsub('"','\\"'):gsub('\n','\\n'):gsub('\r','\\r'):gsub('\t','\\t') .. '"'
+        elseif t == "table" then
+            -- detect array
+            local isArr = (#v > 0)
+            if isArr then
+                local parts = {}
+                for _, item in ipairs(v) do parts[#parts+1] = jsonEncode(item) end
+                return "[" .. table.concat(parts, ",") .. "]"
+            else
+                local parts = {}
+                for k, val in pairs(v) do
+                    if type(k) == "string" then
+                        parts[#parts+1] = jsonEncode(k) .. ":" .. jsonEncode(val)
+                    end
+                end
+                return "{" .. table.concat(parts, ",") .. "}"
+            end
+        end
+        return "null"
+    end
+
+    local function jsonDecode(s)
+        -- Use HttpService if available (it's accessible client-side for JSONDecode)
+        local hs = pcall(function() return game:GetService("HttpService") end) and game:GetService("HttpService")
+        if hs then
+            local ok, result = pcall(function() return hs:JSONDecode(s) end)
+            if ok then return result end
+        end
+        return nil
+    end
+
+    -- Persistence helpers: use executor writefile/readfile when available
+    local function canWriteFiles()
+        return type(writefile) == "function" and type(readfile) == "function"
+    end
+
+    local function saveToFile()
+        if not canWriteFiles() then return end
+        pcall(function() writefile(SAVE_FILE, jsonEncode(_cache)) end)
+    end
+
+    local function loadFromFile()
+        if not canWriteFiles() then return end
+        local ok, content = pcall(function() return readfile(SAVE_FILE) end)
+        if ok and content and content ~= "" then
+            local data = jsonDecode(content)
+            if type(data) == "table" then
+                for k, v in pairs(data) do _cache[k] = v end
+            end
+        end
     end
 
     function M.Init()
-        local remotes = GetRemotes()
-        if not remotes then return false end
-        local loadAll = remotes:FindFirstChild("LoadAll")
-        if loadAll then
-            local ok, data = pcall(function() return loadAll:InvokeServer() end)
-            if ok and data then for key, blob in pairs(data) do _cache[key] = blob end end
-        end
-        M.StartClientAutoSave(); return true
+        loadFromFile()
+        return canWriteFiles()  -- returns true if file persistence is available
     end
 
-    function M.Get(key)   return _cache[key] end
-    function M.Set(key,v) _cache[key]=v; _dirty[key]=true end
-
-    function M.Flush()
-        local remotes = GetRemotes(); if not remotes then return end
-        local saveRemote = remotes:FindFirstChild("AutoSave")
-        if saveRemote and next(_dirty) then
-            local payload = {}
-            for key in pairs(_dirty) do payload[key] = _cache[key] end
-            pcall(function() saveRemote:FireServer(payload) end)
-            _dirty = {}
-        end
-    end
-
-    function M.StartClientAutoSave()
-        task.spawn(function()
-            while true do task.wait(AUTO_SAVE_INTERVAL); M.Flush() end
-        end)
-    end
+    function M.Get(key)    return _cache[key] end
+    function M.Set(key, v) _cache[key] = v end
+    function M.Flush()     saveToFile() end
 
     function M.DefaultSlots()
         return {Idle=nil,Idle2=nil,Walk=nil,Run=nil,Jump=nil,Fall=nil,Swim=nil,Float=nil,Climb=nil,Sit=nil}
@@ -2335,9 +2378,11 @@ local KeyframeEditor = (function()
 
     function M:_updateSliders(euler)
         for _,axis in ipairs({"X","Y","Z"}) do
-            local s=self._rotSliders[axis]; if not s then continue end
-            local deg=euler[axis] or 0; local frac=(deg/360)+0.5
-            s.value=deg; s.fill.Size=UDim2.new(frac,0,1,0); s.thumb.Position=UDim2.new(frac,-7,0.5,-7)
+            local s=self._rotSliders[axis]
+            if s then
+                local deg=euler[axis] or 0; local frac=(deg/360)+0.5
+                s.value=deg; s.fill.Size=UDim2.new(frac,0,1,0); s.thumb.Position=UDim2.new(frac,-7,0.5,-7)
+            end
         end
     end
 
@@ -2593,21 +2638,66 @@ end)()
 --  MAIN CONTROLLER
 -- ════════════════════════════════════════════════════════
 
--- Screen Gui
+-- ── Screen GUI ────────────────────────────────────────
+-- Always use CoreGui so this works in executors, LocalScripts, and plugins
+local CoreGui = game:GetService("CoreGui")
+
+-- Remove any previous instance so re-execution works cleanly
+pcall(function()
+    local old = CoreGui:FindFirstChild("AnimationStudioGui")
+    if old then old:Destroy() end
+end)
+pcall(function()
+    local pg = LocalPlayer:FindFirstChild("PlayerGui")
+    if pg then
+        local old = pg:FindFirstChild("AnimationStudioGui")
+        if old then old:Destroy() end
+    end
+end)
+
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name            = "AnimationStudioGui"
 screenGui.ResetOnSpawn    = false
 screenGui.IgnoreGuiInset  = true
 screenGui.ZIndexBehavior  = Enum.ZIndexBehavior.Sibling
 screenGui.DisplayOrder    = 10
-screenGui.Parent          = LocalPlayer:WaitForChild("PlayerGui")
 
--- Core systems
-local undoRedo    = UndoRedo.new()
-local animManager = AnimationManager.new(nil)
-local playbackSys = PlaybackSystem.new(animManager)
+-- Prefer CoreGui (executor-compatible). Try protect_gui on supported executors.
+pcall(function()
+    if syn and syn.protect_gui then syn.protect_gui(screenGui) end
+end)
+pcall(function()
+    if protect_gui then protect_gui(screenGui) end
+end)
+screenGui.Parent = CoreGui
 
--- Shared context
+-- ── Error display helper (shown on screen if init fails) ──
+local function showFatalError(msg)
+    local errLbl = Instance.new("TextLabel")
+    errLbl.Size               = UDim2.new(1, -20, 0, 80)
+    errLbl.Position           = UDim2.new(0, 10, 0.4, 0)
+    errLbl.BackgroundColor3   = Color3.fromRGB(30, 10, 10)
+    errLbl.BorderSizePixel    = 0
+    errLbl.Text               = "[AnimStudio ERROR]\n" .. tostring(msg)
+    errLbl.TextColor3         = Color3.fromRGB(255, 100, 100)
+    errLbl.Font               = Enum.Font.Code
+    errLbl.TextSize           = 13
+    errLbl.TextWrapped        = true
+    errLbl.ZIndex             = 999
+    errLbl.Parent             = screenGui
+    warn("[AnimStudio] FATAL: " .. tostring(msg))
+end
+
+-- ── Core systems ──────────────────────────────────────
+local undoRedo, animManager, playbackSys
+local ok, err = pcall(function()
+    undoRedo    = UndoRedo.new()
+    animManager = AnimationManager.new(nil)
+    playbackSys = PlaybackSystem.new(animManager)
+end)
+if not ok then showFatalError("Core init failed: " .. tostring(err)); return end
+
+-- ── Shared context ────────────────────────────────────
 local ctx = {
     animManager   = animManager,
     undoRedo      = undoRedo,
@@ -2622,87 +2712,90 @@ local ctx = {
     onEditorExit  = nil,
 }
 
--- UI systems
-local studio      = StudioInterface.new(screenGui, ctx)
-ctx.studio        = studio
+-- ── UI systems ────────────────────────────────────────
+local studio, floatSystem, animEditor, toggleBtn
+ok, err = pcall(function()
+    studio      = StudioInterface.new(screenGui, ctx)
+    ctx.studio  = studio
 
-local floatSystem = FloatingEmoteSystem.new(screenGui, ctx)
-ctx.floatSystem   = floatSystem
+    floatSystem    = FloatingEmoteSystem.new(screenGui, ctx)
+    ctx.floatSystem = floatSystem
 
-local animEditor  = AnimEditorTab.new(screenGui, ctx)
+    animEditor  = AnimEditorTab.new(screenGui, ctx)
 
-local toggleBtn   = ToggleButton.new(screenGui, function(isOpen)
-    if isOpen then studio:Show() else studio:Hide() end
+    toggleBtn = ToggleButton.new(screenGui, function(isOpen)
+        if isOpen then studio:Show() else studio:Hide() end
+    end)
 end)
+if not ok then showFatalError("UI init failed: " .. tostring(err)); return end
 
--- Editor callbacks
+-- ── Editor callbacks ──────────────────────────────────
 ctx.onOpenEditor  = function(slotName) studio:Hide(); animEditor:Enter(slotName) end
 ctx.onEditorEnter = function() toggleBtn:HideForEditor() end
 ctx.onEditorExit  = function() toggleBtn:ShowFromEditor(); studio:Show() end
 
--- Character binding
+-- ── Character binding ─────────────────────────────────
 local function onCharacterAdded(character)
-    character:WaitForChild("HumanoidRootPart", 10)
-    character:WaitForChild("Humanoid", 10)
-    ctx.character = character
-    animManager:BindCharacter(character)
-    playbackSys:Stop(); playbackSys:Start()
-    local savedSlots = SaveLoad.Get("AnimSlots")
-    if savedSlots then animManager:DeserializeSlots(savedSlots) end
-    undoRedo:OnChange(function(undoCount, _)
-        toggleBtn:SetUnsaved(undoCount > 0)
+    pcall(function()
+        character:WaitForChild("HumanoidRootPart", 10)
+        character:WaitForChild("Humanoid", 10)
+        ctx.character = character
+        animManager:BindCharacter(character)
+        playbackSys:Stop()
+        playbackSys:Start()
+        local savedSlots = SaveLoad.Get("AnimSlots")
+        if savedSlots then animManager:DeserializeSlots(savedSlots) end
+        undoRedo:OnChange(function(undoCount)
+            toggleBtn:SetUnsaved(undoCount > 0)
+        end)
     end)
 end
 
-if LocalPlayer.Character then onCharacterAdded(LocalPlayer.Character) end
+if LocalPlayer.Character then
+    task.spawn(onCharacterAdded, LocalPlayer.Character)
+end
 LocalPlayer.CharacterAdded:Connect(onCharacterAdded)
 
--- Save/Load init
+-- ── Save / Load init (async, non-blocking) ────────────
 task.spawn(function()
-    local ok = SaveLoad.Init()
     SaveLoad.EnsureDefaults()
-    if ok then
-        local uiState = SaveLoad.Get("UIState")
-        if uiState then
-            toggleBtn:SetPosition(uiState.toggleBtnPos)
-            if uiState.activeTab then studio:SwitchTab(uiState.activeTab, true) end
-            if uiState.playbackMode then playbackSys:Deserialize({mode=uiState.playbackMode}) end
-        end
-        local floatData = SaveLoad.Get("FloatEmotes")
-        if floatData then floatSystem:Deserialize(floatData) end
-        studio:Notify("Animation Studio ready", "success")
-    else
-        studio:Notify("Running offline (no save)", "warning")
+    local loadOk = pcall(function() SaveLoad.Init() end)
+    local uiState = SaveLoad.Get("UIState")
+    if uiState then
+        pcall(function() toggleBtn:SetPosition(uiState.toggleBtnPos) end)
+        pcall(function() if uiState.activeTab then studio:SwitchTab(uiState.activeTab, true) end end)
+        pcall(function() if uiState.playbackMode then playbackSys:Deserialize({mode=uiState.playbackMode}) end end)
     end
+    local floatData = SaveLoad.Get("FloatEmotes")
+    if floatData then pcall(function() floatSystem:Deserialize(floatData) end) end
+    pcall(function() studio:Notify("Animation Studio loaded!", "success") end)
 end)
 
--- Auto-save loop
+-- ── Auto-save loop ────────────────────────────────────
 task.spawn(function()
-    while true do
-        task.wait(45)
-        SaveLoad.Set("AnimSlots",   animManager:SerializeSlots())
-        SaveLoad.Set("FloatEmotes", floatSystem:Serialize())
-        SaveLoad.Set("UIState", {
-            toggleBtnPos = toggleBtn:GetPosition(),
-            activeTab    = studio._activeTab or "Home",
-            playbackMode = playbackSys:GetMode(),
-        })
-        SaveLoad.Flush()
+    while task.wait(45) do
+        pcall(function()
+            SaveLoad.Set("AnimSlots",   animManager:SerializeSlots())
+            SaveLoad.Set("FloatEmotes", floatSystem:Serialize())
+            SaveLoad.Set("UIState", {
+                toggleBtnPos = toggleBtn:GetPosition(),
+                activeTab    = studio._activeTab or "Home",
+                playbackMode = playbackSys:GetMode(),
+            })
+            SaveLoad.Flush()
+        end)
     end
 end)
 
--- Responsive resize
-workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
-    if studio:IsVisible() then studio:Hide(); task.delay(0.05, function() studio:Show() end) end
+-- ── Camera viewport resize ────────────────────────────
+pcall(function()
+    camera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
+        if studio and studio:IsVisible() then
+            studio:Hide()
+            task.delay(0.05, function() studio:Show() end)
+        end
+    end)
 end)
 
--- Studio access
+-- ── Suppress default Roblox HUD if needed ─────────────
 pcall(function() StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.All, true) end)
-
--- Debug label (remove in production)
-if RunService:IsStudio() then
-    local lbl = Instance.new("TextLabel")
-    lbl.Size=UDim2.new(0,260,0,20); lbl.Position=UDim2.new(0,4,0,4); lbl.BackgroundTransparency=1
-    lbl.Text="AnimStudio v1.0 — Single File Edition"; lbl.TextColor3=Color3.fromRGB(140,140,180)
-    lbl.Font=Enum.Font.Code; lbl.TextSize=11; lbl.TextXAlignment=Enum.TextXAlignment.Left; lbl.Parent=screenGui
-end
