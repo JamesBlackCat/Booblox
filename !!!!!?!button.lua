@@ -1,8 +1,11 @@
 -- ============================================================
---  UI Layout Editor — Rayfield Edition
---  Theme: Black Haze + Blue
+--  UI Layout Editor  |  Rayfield  |  v3
+--  Mobile-first  |  Black Haze + Blue theme
 -- ============================================================
 
+-- ============================================================
+--  SERVICES
+-- ============================================================
 local Players      = game:GetService("Players")
 local UIS          = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
@@ -13,101 +16,103 @@ local PlayerGui   = LocalPlayer:WaitForChild("PlayerGui")
 
 local PLACE_ID  = tostring(game.PlaceId)
 local GAME_URL  = "roblox.com/games/" .. PLACE_ID
-local SAVE_FILE = "UILayoutEditor_Layouts.json"
+local SAVE_FILE = "UILayoutEditor_v3.json"
 
 -- ============================================================
 --  LOAD RAYFIELD
 -- ============================================================
-
-local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
+local ok, Rayfield = pcall(function()
+    return loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
+end)
+if not ok then
+    warn("[UILayoutEditor] Failed to load Rayfield: " .. tostring(Rayfield))
+    return
+end
 
 -- ============================================================
 --  CUSTOM THEME  (Black Haze + Blue)
 -- ============================================================
-
 Rayfield:SetCustomTheme({
-    TextColor                     = Color3.fromRGB(230, 235, 255),
+    TextColor                     = Color3.fromRGB(225, 230, 255),
     Background                    = Color3.fromRGB(8,   8,  16),
-    Topbar                        = Color3.fromRGB(12,  12,  22),
-    Shadow                        = Color3.fromRGB(0,    0,   0),
-    NotificationBackground        = Color3.fromRGB(12,  12,  22),
-    NotificationActionsBackground = Color3.fromRGB(18,  18,  32),
-    TabBackground                 = Color3.fromRGB(10,  10,  20),
+    Topbar                        = Color3.fromRGB(11,  11,  21),
+    Shadow                        = Color3.fromRGB(0,   0,   0),
+    NotificationBackground        = Color3.fromRGB(11,  11,  21),
+    NotificationActionsBackground = Color3.fromRGB(17,  17,  31),
+    TabBackground                 = Color3.fromRGB(9,   9,  18),
     TabStroke                     = Color3.fromRGB(22,  22,  40),
-    TabBackgroundSelected         = Color3.fromRGB(16,  16,  30),
-    TabTextColor                  = Color3.fromRGB(110, 110, 140),
-    SelectedTabTextColor          = Color3.fromRGB(60,  180, 255),
+    TabBackgroundSelected         = Color3.fromRGB(15,  15,  28),
+    TabTextColor                  = Color3.fromRGB(100, 100, 135),
+    SelectedTabTextColor          = Color3.fromRGB(55,  165, 255),
     ElementBackground             = Color3.fromRGB(14,  14,  26),
     ElementBackgroundHover        = Color3.fromRGB(20,  20,  36),
     SecondaryElementBackground    = Color3.fromRGB(10,  10,  20),
-    ElementStroke                 = Color3.fromRGB(26,  26,  46),
-    SecondaryElementStroke        = Color3.fromRGB(20,  20,  36),
+    ElementStroke                 = Color3.fromRGB(24,  24,  44),
+    SecondaryElementStroke        = Color3.fromRGB(18,  18,  34),
     SliderBackground              = Color3.fromRGB(14,  14,  26),
-    SliderProgress                = Color3.fromRGB(30,  160, 255),
-    SliderStroke                  = Color3.fromRGB(26,  26,  46),
-    ToggleBackground              = Color3.fromRGB(26,  26,  46),
-    ToggleEnabled                 = Color3.fromRGB(30,  160, 255),
-    ToggleDisabled                = Color3.fromRGB(44,  44,  66),
-    ToggleEnabledStroke           = Color3.fromRGB(20,  130, 220),
-    ToggleDisabledStroke          = Color3.fromRGB(36,  36,  58),
-    ToggleEnabledOuterStroke      = Color3.fromRGB(10,  100, 190),
-    ToggleDisabledOuterStroke     = Color3.fromRGB(26,  26,  46),
-    DropdownSelected              = Color3.fromRGB(30,  160, 255),
-    DropdownUnselected            = Color3.fromRGB(110, 110, 140),
+    SliderProgress                = Color3.fromRGB(35,  155, 255),
+    SliderStroke                  = Color3.fromRGB(24,  24,  44),
+    ToggleBackground              = Color3.fromRGB(24,  24,  44),
+    ToggleEnabled                 = Color3.fromRGB(35,  155, 255),
+    ToggleDisabled                = Color3.fromRGB(42,  42,  64),
+    ToggleEnabledStroke           = Color3.fromRGB(20,  125, 220),
+    ToggleDisabledStroke          = Color3.fromRGB(34,  34,  56),
+    ToggleEnabledOuterStroke      = Color3.fromRGB(10,   95, 185),
+    ToggleDisabledOuterStroke     = Color3.fromRGB(24,  24,  44),
+    DropdownSelected              = Color3.fromRGB(35,  155, 255),
+    DropdownUnselected            = Color3.fromRGB(100, 100, 135),
     InputBackground               = Color3.fromRGB(10,  10,  20),
-    InputStroke                   = Color3.fromRGB(26,  26,  46),
-    PlaceholderColor              = Color3.fromRGB(70,  70,  100),
+    InputStroke                   = Color3.fromRGB(24,  24,  44),
+    PlaceholderColor              = Color3.fromRGB(65,  65,  95),
 })
 
 -- ============================================================
---  WINDOW
+--  RAYFIELD WINDOW
 -- ============================================================
-
 local Window = Rayfield:CreateWindow({
-    Name             = "UI Layout Editor",
-    Icon             = 0,
-    LoadingTitle     = "UI Layout Editor",
-    LoadingSubtitle  = "Game: " .. PLACE_ID,
-    Theme            = "Custom",
-    DisableRayfieldPrompts  = false,
-    DisableBuildWarnings    = true,
-    ConfigurationSaving     = { Enabled = false },
-    Discord                 = { Enabled = false },
-    KeySystem               = false,
+    Name                   = "UI Layout Editor",
+    Icon                   = 0,
+    LoadingTitle           = "UI Layout Editor",
+    LoadingSubtitle        = "Game: " .. PLACE_ID,
+    Theme                  = "Custom",
+    DisableRayfieldPrompts = false,
+    DisableBuildWarnings   = true,
+    ConfigurationSaving    = { Enabled = false },
+    Discord                = { Enabled = false },
+    KeySystem              = false,
 })
 
 -- ============================================================
 --  PERSISTENCE
 -- ============================================================
-
 local layouts = {}
 
 local function loadLayouts()
     if readfile then
-        local ok, raw = pcall(readfile, SAVE_FILE)
-        if ok and raw and raw ~= "" then
-            local ok2, t = pcall(HttpService.JSONDecode, HttpService, raw)
-            if ok2 and type(t) == "table" then layouts = t end
+        local ok2, raw = pcall(readfile, SAVE_FILE)
+        if ok2 and raw and raw ~= "" then
+            local ok3, t = pcall(HttpService.JSONDecode, HttpService, raw)
+            if ok3 and type(t) == "table" then layouts = t end
         end
     end
 end
 
 local function saveLayouts()
     if writefile then
-        local ok, data = pcall(HttpService.JSONEncode, HttpService, layouts)
-        if ok then pcall(writefile, SAVE_FILE, data) end
+        local ok2, data = pcall(HttpService.JSONEncode, HttpService, layouts)
+        if ok2 then pcall(writefile, SAVE_FILE, data) end
     end
 end
 
 loadLayouts()
 
 -- ============================================================
---  DRAG UTILITY  (for custom floating panels)
---    makeDraggable(frame, onTap?)
---    Uses UIS global events — reliable on mobile touch
+--  DRAG UTILITY
+--  makeDraggable(frame, onTap?)
+--  • Drags the frame within the viewport using UIS global events
+--  • Fires onTap() when released with movement < TAP_PX (i.e. a tap, not a drag)
 -- ============================================================
-
-local TAP_PX = 14
+local TAP_PX = 12
 
 local function makeDraggable(frame, onTap)
     local active     = false
@@ -127,12 +132,9 @@ local function makeDraggable(frame, onTap)
         if input.UserInputType ~= Enum.UserInputType.Touch
         and input.UserInputType ~= Enum.UserInputType.MouseMovement then return end
         local vp = workspace.CurrentCamera.ViewportSize
-        local dx = input.Position.X - startTouch.X
-        local dy = input.Position.Y - startTouch.Y
-        frame.Position = UDim2.fromOffset(
-            math.clamp(startOff.X + dx, 0, vp.X - frame.AbsoluteSize.X),
-            math.clamp(startOff.Y + dy, 0, vp.Y - frame.AbsoluteSize.Y)
-        )
+        local nx = math.clamp(startOff.X + (input.Position.X - startTouch.X), 0, vp.X - frame.AbsoluteSize.X)
+        local ny = math.clamp(startOff.Y + (input.Position.Y - startTouch.Y), 0, vp.Y - frame.AbsoluteSize.Y)
+        frame.Position = UDim2.fromOffset(nx, ny)
     end)
 
     UIS.InputEnded:Connect(function(input)
@@ -150,241 +152,200 @@ local function makeDraggable(frame, onTap)
 end
 
 -- ============================================================
---  ROOT SCREENGUI  (for custom panels only)
+--  CUSTOM SCREENGUI  (for floating panels only — not Rayfield)
 -- ============================================================
-
-if PlayerGui:FindFirstChild("UILayoutEditor") then
-    PlayerGui.UILayoutEditor:Destroy()
+if PlayerGui:FindFirstChild("UILayoutEditor_Panels") then
+    PlayerGui.UILayoutEditor_Panels:Destroy()
 end
+local PanelRoot = Instance.new("ScreenGui")
+PanelRoot.Name            = "UILayoutEditor_Panels"
+PanelRoot.ResetOnSpawn    = false
+PanelRoot.ZIndexBehavior  = Enum.ZIndexBehavior.Sibling
+PanelRoot.IgnoreGuiInset  = true
+PanelRoot.DisplayOrder    = 997
+PanelRoot.Parent          = PlayerGui
 
-local Root = Instance.new("ScreenGui")
-Root.Name            = "UILayoutEditor"
-Root.ResetOnSpawn    = false
-Root.ZIndexBehavior  = Enum.ZIndexBehavior.Sibling
-Root.IgnoreGuiInset  = true
-Root.DisplayOrder    = 998
-Root.Parent          = PlayerGui
+-- Panel colours
+local BG   = Color3.fromRGB(9,   9,  18)
+local BGL  = Color3.fromRGB(16,  16, 30)
+local BGLL = Color3.fromRGB(24,  24, 44)
+local BLUE = Color3.fromRGB(35, 155, 255)
+local BLUD = Color3.fromRGB(8,   45,  85)
+local WHT  = Color3.fromRGB(225, 230, 255)
+local DIM  = Color3.fromRGB(100, 100, 135)
+local RED  = Color3.fromRGB(235,  62,  62)
+local REDD = Color3.fromRGB(40,   9,   9)
 
--- Custom panel colors
-local BG   = Color3.fromRGB(10,  10,  20)
-local BGL  = Color3.fromRGB(18,  18,  32)
-local BGLL = Color3.fromRGB(26,  26,  44)
-local BLUE = Color3.fromRGB(30,  160, 255)
-local BLUD = Color3.fromRGB(8,   50,  90)
-local WHT  = Color3.fromRGB(230, 235, 255)
-local DIM  = Color3.fromRGB(110, 110, 140)
-local RED  = Color3.fromRGB(235, 65,  65)
-local REDD = Color3.fromRGB(42,  10,  10)
-
-local function corner(p, r)
+-- Tiny GUI helpers
+local function uicorner(p, r)
     local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(0, r or 12); c.Parent = p
 end
-local function stroke(p, col, alpha, thick)
-    local s = Instance.new("UIStroke"); s.Color = col or WHT; s.Transparency = alpha or 0.75
+local function uistroke(p, col, alpha, thick)
+    local s = Instance.new("UIStroke"); s.Color = col; s.Transparency = alpha or 0.75
     s.Thickness = thick or 1; s.Parent = p
 end
-local function pad(p, t, b, l, r)
-    local u = Instance.new("UIPadding"); u.PaddingTop = UDim.new(0, t or 10)
-    u.PaddingBottom = UDim.new(0, b or t or 10); u.PaddingLeft = UDim.new(0, l or t or 10)
-    u.PaddingRight = UDim.new(0, r or l or t or 10); u.Parent = p
+local function uipad(p, t, b, l, r)
+    local u = Instance.new("UIPadding")
+    u.PaddingTop = UDim.new(0, t); u.PaddingBottom = UDim.new(0, b or t)
+    u.PaddingLeft = UDim.new(0, l or t); u.PaddingRight = UDim.new(0, r or l or t)
+    u.Parent = p
 end
-local function vlist(p, gap)
+local function uivlist(p, gap)
     local l = Instance.new("UIListLayout"); l.Padding = UDim.new(0, gap or 8)
     l.SortOrder = Enum.SortOrder.LayoutOrder; l.FillDirection = Enum.FillDirection.Vertical
     l.HorizontalAlignment = Enum.HorizontalAlignment.Left; l.Parent = p; return l
 end
-local function grid2(p, h, gx)
-    local g = Instance.new("UIGridLayout"); g.CellSize = UDim2.new(0.5, -(gx or 6)/2, 0, h or 38)
+local function uigrid2(p, h, gx)
+    local g = Instance.new("UIGridLayout")
+    g.CellSize = UDim2.new(0.5, -math.ceil((gx or 6)/2), 0, h or 38)
     g.CellPadding = UDim2.new(0, gx or 6, 0, 6); g.SortOrder = Enum.SortOrder.LayoutOrder; g.Parent = p
 end
-local function fitH(frame, list, extra)
+local function fitHeight(frame, list, extra)
     task.defer(function()
         frame.Size = UDim2.fromOffset(frame.AbsoluteSize.X, list.AbsoluteContentSize.Y + (extra or 24))
     end)
+end
+local function uisep(p, order)
+    local f = Instance.new("Frame"); f.Size = UDim2.new(1, 0, 0, 1)
+    f.BackgroundColor3 = WHT; f.BackgroundTransparency = 0.85
+    f.BorderSizePixel = 0; f.LayoutOrder = order; f.Parent = p
 end
 
 -- ============================================================
 --  STATE
 -- ============================================================
-
 local editMode       = false
-local highlightMap   = {}
-local originalStates = {}
-local undoStates     = {}
-local selectedElem   = nil
-
-local EditPanel  = nil
-local ExitBtn    = nil
-local ActiveDlg  = nil
-
-local selectedDropdownLayout = nil  -- name of layout selected in dropdown
+local highlightMap   = {}   -- GuiObject → UIStroke
+local originalStates = {}   -- GuiObject → {size, pos, trans}
+local undoStates     = {}   -- GuiObject → {size, pos, trans}  (snapshot at tap time)
+local EditPanel      = nil
+local ExitBtn        = nil
+local ActiveDlg      = nil
 
 -- ============================================================
 --  TABS
 -- ============================================================
-
-local LayoutsTab = Window:CreateTab("Layouts",   4483362458)
-local EditTab    = Window:CreateTab("Edit Mode",  4483366917)
-
--- ============================================================
---  HELPERS: rebuild the layouts dropdown
--- ============================================================
-
-local LayoutDropdown = nil
-
-local function layoutNames()
-    local names = {}
-    for _, l in ipairs(layouts) do
-        table.insert(names, l.name .. (l.placeId ~= PLACE_ID and "  ⚠" or ""))
-    end
-    return names
-end
-
-local function findLayoutByDisplayName(displayName)
-    for i, l in ipairs(layouts) do
-        local dn = l.name .. (l.placeId ~= PLACE_ID and "  ⚠" or "")
-        if dn == displayName then return i, l end
-    end
-    return nil, nil
-end
-
-local function refreshDropdown()
-    if LayoutDropdown then
-        local names = layoutNames()
-        LayoutDropdown:Refresh(names, false)
-        if #names > 0 then
-            LayoutDropdown:Set(names[1])
-            selectedDropdownLayout = names[1]
-        else
-            selectedDropdownLayout = nil
-        end
-    end
-end
+local LayoutsTab = Window:CreateTab("Layouts",  4483362458)
+local EditTab    = Window:CreateTab("Edit Layout", 4483366917)
 
 -- ============================================================
---  LAYOUTS TAB CONTENT
+--  LAYOUTS TAB
 -- ============================================================
-
 LayoutsTab:CreateSection("Button Layouts")
 
-LayoutDropdown = LayoutsTab:CreateDropdown({
-    Name              = "Saved Layouts",
-    Options           = layoutNames(),
-    CurrentOption     = {},
-    MultipleOptions   = false,
-    Flag              = "SelectedLayout",
-    Callback          = function(value)
-        selectedDropdownLayout = value
-    end,
-})
+-- We'll keep references to dynamically-created layout elements so we can rebuild
+local layoutElements = {}  -- list of {label, dotMenu}  — rebuilt on renderLayouts()
 
-LayoutsTab:CreateButton({
-    Name     = "Load Selected Layout",
-    Callback = function()
-        if not selectedDropdownLayout then
-            Rayfield:Notify({ Title = "No Layout Selected", Content = "Select a layout from the dropdown first.", Duration = 3 })
-            return
-        end
-        local _, layout = findLayoutByDisplayName(selectedDropdownLayout)
-        if not layout then return end
-        if layout.placeId ~= PLACE_ID then
-            Rayfield:Notify({
-                Title   = "Incompatible Layout",
-                Content = "This layout was saved for game ID: " .. (layout.placeId or "?"),
-                Duration = 4,
-            })
-            return
-        end
-        for elemName, d in pairs(layout.elements) do
-            local elem = PlayerGui:FindFirstChild(elemName, true)
-            if elem and elem:IsA("GuiObject") then
-                elem.Size     = UDim2.new(d.sXS, d.sXO, d.sYS, d.sYO)
-                elem.Position = UDim2.new(d.pXS, d.pXO, d.pYS, d.pYO)
-                elem.BackgroundTransparency = d.trans or 0
-            end
-        end
-        Rayfield:Notify({ Title = "Layout Loaded", Content = "\"" .. layout.name .. "\" applied.", Duration = 3 })
-    end,
-})
+local statusLabel    -- forward reference, defined in EditTab section below
 
-LayoutsTab:CreateSection("Manage Selected")
-
-local RenameInput = LayoutsTab:CreateInput({
-    Name              = "Rename Layout",
-    CurrentValue      = "",
-    PlaceholderText   = "New layout name...",
-    RemoveTextAfterFocusLost = false,
-    Flag              = "RenameValue",
-    Callback          = function(_) end,
-})
-
-LayoutsTab:CreateButton({
-    Name     = "Apply Rename",
-    Callback = function()
-        if not selectedDropdownLayout then
-            Rayfield:Notify({ Title = "No Layout Selected", Content = "Select a layout first.", Duration = 3 }); return
+local function renderLayouts()
+    -- Destroy old dynamic elements
+    for _, refs in ipairs(layoutElements) do
+        for _, ref in ipairs(refs) do
+            if ref and ref.Destroy then pcall(function() ref:Destroy() end) end
         end
-        local newName = Rayfield.Flags["RenameValue"]
-        if not newName or newName == "" then
-            Rayfield:Notify({ Title = "Empty Name", Content = "Type a new name in the input above.", Duration = 3 }); return
-        end
-        local i, _ = findLayoutByDisplayName(selectedDropdownLayout)
-        if not i then return end
-        layouts[i].name = newName
-        saveLayouts(); refreshDropdown()
-        Rayfield:Notify({ Title = "Renamed", Content = "Layout renamed to \"" .. newName .. "\".", Duration = 3 })
-    end,
-})
+    end
+    layoutElements = {}
 
-LayoutsTab:CreateButton({
-    Name     = "Delete Selected Layout",
-    Callback = function()
-        if not selectedDropdownLayout then
-            Rayfield:Notify({ Title = "No Layout Selected", Content = "Select a layout first.", Duration = 3 }); return
-        end
-        local i, layout = findLayoutByDisplayName(selectedDropdownLayout)
-        if not i then return end
-        local name = layout.name
-        table.remove(layouts, i)
-        saveLayouts(); refreshDropdown()
-        Rayfield:Notify({ Title = "Deleted", Content = "\"" .. name .. "\" has been removed.", Duration = 3 })
-    end,
-})
+    if #layouts == 0 then
+        local noLbl = LayoutsTab:CreateLabel("No layouts saved yet.")
+        table.insert(layoutElements, {noLbl})
+        return
+    end
+
+    for i, layout in ipairs(layouts) do
+        local compat = layout.placeId == PLACE_ID
+        local displayName = layout.name .. (not compat and "  ⚠ wrong game" or "")
+
+        -- Section per layout (Rayfield's section acts as a visual divider/header)
+        local sec = LayoutsTab:CreateSection(displayName)
+
+        local loadBtn = LayoutsTab:CreateButton({
+            Name = "Load  \"" .. layout.name .. "\"",
+            Callback = function()
+                if not compat then
+                    Rayfield:Notify({
+                        Title   = "Wrong Game",
+                        Content = "Saved for ID: " .. (layout.placeId or "?") .. ". Current: " .. PLACE_ID,
+                        Duration = 4,
+                    }); return
+                end
+                for elemName, d in pairs(layout.elements) do
+                    local elem = PlayerGui:FindFirstChild(elemName, true)
+                    if elem and elem:IsA("GuiObject") then
+                        elem.Size     = UDim2.new(d.sXS, d.sXO, d.sYS, d.sYO)
+                        elem.Position = UDim2.new(d.pXS, d.pXO, d.pYS, d.pYO)
+                        elem.BackgroundTransparency = d.trans or 0
+                    end
+                end
+                Rayfield:Notify({ Title = "Layout Loaded", Content = "\"" .. layout.name .. "\" applied.", Duration = 3 })
+            end,
+        })
+
+        local renameInput = LayoutsTab:CreateInput({
+            Name              = "Rename",
+            CurrentValue      = "",
+            PlaceholderText   = "New name...",
+            RemoveTextAfterFocusLost = false,
+            Flag              = "Rename_" .. i,
+            Callback          = function(_) end,
+        })
+
+        local renameBtn = LayoutsTab:CreateButton({
+            Name = "Apply Rename",
+            Callback = function()
+                local newName = Rayfield.Flags["Rename_" .. i]
+                if not newName or newName == "" then
+                    Rayfield:Notify({ Title = "Empty", Content = "Type a name first.", Duration = 2 }); return
+                end
+                layouts[i].name = newName; saveLayouts()
+                Rayfield:Notify({ Title = "Renamed", Content = "Now called: \"" .. newName .. "\"", Duration = 3 })
+                renderLayouts()
+            end,
+        })
+
+        local deleteBtn = LayoutsTab:CreateButton({
+            Name = "Delete  \"" .. layout.name .. "\"",
+            Callback = function()
+                local name = layouts[i].name
+                table.remove(layouts, i); saveLayouts()
+                Rayfield:Notify({ Title = "Deleted", Content = "\"" .. name .. "\" removed.", Duration = 3 })
+                renderLayouts()
+            end,
+        })
+
+        table.insert(layoutElements, {sec, loadBtn, renameInput, renameBtn, deleteBtn})
+    end
+end
 
 -- ============================================================
---  EDIT MODE TAB CONTENT
+--  EDIT LAYOUT TAB
 -- ============================================================
+EditTab:CreateSection("Edit Mode")
 
-EditTab:CreateSection("Layout Editing")
-
-local statusLabel = EditTab:CreateLabel("Status: Idle  —  Tap 'Enter Edit Mode' to start")
+statusLabel = EditTab:CreateLabel("Idle  —  press Enter Edit Mode below")
 
 EditTab:CreateButton({
     Name     = "Enter Edit Mode",
     Callback = function()
         if editMode then
-            Rayfield:Notify({ Title = "Already Active", Content = "Edit mode is already on.", Duration = 2 }); return
+            Rayfield:Notify({ Title = "Already Active", Content = "Edit mode is already on.", Duration = 2 })
+            return
         end
-        Rayfield:Notify({
-            Title   = "Edit Mode Active",
-            Content = "Tap any GUI element on screen to edit it. Use the red X to exit.",
-            Duration = 4,
-        })
         enterEditMode()
     end,
 })
 
-EditTab:CreateSection("How It Works")
-EditTab:CreateLabel("1.  Tap 'Enter Edit Mode'")
-EditTab:CreateLabel("2.  Tap any game GUI element")
-EditTab:CreateLabel("3.  Adjust Size & Transparency")
-EditTab:CreateLabel("4.  Press the red X to save/exit")
+EditTab:CreateSection("Info")
+EditTab:CreateLabel("1. Press Enter Edit Mode")
+EditTab:CreateLabel("2. Drag any highlighted element to move it")
+EditTab:CreateLabel("3. Tap (don't drag) an element to edit size/transparency")
+EditTab:CreateLabel("4. Press the red X when done")
 EditTab:CreateLabel("Game ID: " .. PLACE_ID)
 
 -- ============================================================
---  SLIDER HELPER  (for the custom edit panel)
+--  CUSTOM SLIDER (used in the floating edit panel)
 -- ============================================================
-
 local function makeSlider(parent, order, labelText, initVal, minVal, maxVal, fmt, onChange)
     local wrap = Instance.new("Frame")
     wrap.Size = UDim2.new(1, 0, 0, 56); wrap.BackgroundTransparency = 1
@@ -393,32 +354,31 @@ local function makeSlider(parent, order, labelText, initVal, minVal, maxVal, fmt
     local hRow = Instance.new("Frame")
     hRow.Size = UDim2.new(1, 0, 0, 16); hRow.BackgroundTransparency = 1; hRow.Parent = wrap
 
-    local l = Instance.new("TextLabel")
-    l.Text = labelText; l.TextSize = 9; l.Font = Enum.Font.GothamBold; l.TextColor3 = DIM
-    l.BackgroundTransparency = 1; l.Size = UDim2.new(0.6, 0, 1, 0); l.LetterSpacing = 1
-    l.TextXAlignment = Enum.TextXAlignment.Left; l.Parent = hRow
+    local lbl = Instance.new("TextLabel")
+    lbl.Text = labelText; lbl.TextSize = 9; lbl.Font = Enum.Font.GothamBold; lbl.TextColor3 = DIM
+    lbl.BackgroundTransparency = 1; lbl.Size = UDim2.new(0.6, 0, 1, 0); lbl.LetterSpacing = 1
+    lbl.TextXAlignment = Enum.TextXAlignment.Left; lbl.Parent = hRow
 
     local valLbl = Instance.new("TextLabel")
-    valLbl.Text = string.format(fmt, initVal); valLbl.TextSize = 9
-    valLbl.Font = Enum.Font.GothamBold; valLbl.TextColor3 = BLUE
-    valLbl.BackgroundTransparency = 1; valLbl.Size = UDim2.new(0.4, 0, 1, 0)
-    valLbl.Position = UDim2.new(0.6, 0, 0, 0)
+    valLbl.Text = string.format(fmt, initVal); valLbl.TextSize = 9; valLbl.Font = Enum.Font.GothamBold
+    valLbl.TextColor3 = BLUE; valLbl.BackgroundTransparency = 1
+    valLbl.Size = UDim2.new(0.4, 0, 1, 0); valLbl.Position = UDim2.new(0.6, 0, 0, 0)
     valLbl.TextXAlignment = Enum.TextXAlignment.Right; valLbl.Parent = hRow
 
     local track = Instance.new("Frame")
     track.Size = UDim2.new(1, 0, 0, 28); track.Position = UDim2.fromOffset(0, 20)
-    track.BackgroundColor3 = BGLL; track.BorderSizePixel = 0; corner(track, 8); track.Parent = wrap
+    track.BackgroundColor3 = BGLL; track.BorderSizePixel = 0; uicorner(track, 8); track.Parent = wrap
 
     local fill = Instance.new("Frame")
     fill.Size = UDim2.new(math.clamp((initVal - minVal) / (maxVal - minVal), 0, 1), 0, 1, 0)
-    fill.BackgroundColor3 = BLUE; fill.BorderSizePixel = 0; corner(fill, 8); fill.Parent = track
+    fill.BackgroundColor3 = BLUE; fill.BorderSizePixel = 0; uicorner(fill, 8); fill.Parent = track
 
     local held = false
     local function apply(px)
         local rel = math.clamp((px - track.AbsolutePosition.X) / math.max(track.AbsoluteSize.X, 1), 0, 1)
         fill.Size = UDim2.new(rel, 0, 1, 0)
-        local val = minVal + rel * (maxVal - minVal)
-        valLbl.Text = string.format(fmt, val); onChange(val)
+        valLbl.Text = string.format(fmt, minVal + rel * (maxVal - minVal))
+        onChange(minVal + rel * (maxVal - minVal))
     end
 
     track.InputBegan:Connect(function(i)
@@ -439,33 +399,37 @@ local function makeSlider(parent, order, labelText, initVal, minVal, maxVal, fmt
 end
 
 -- ============================================================
---  ELEMENT EDIT PANEL  (custom draggable panel)
+--  ELEMENT EDIT PANEL  (floating, draggable)
 -- ============================================================
-
 local function destroyEditPanel()
     if EditPanel and EditPanel.Parent then EditPanel:Destroy() end
-    EditPanel = nil; selectedElem = nil
+    EditPanel = nil
 end
 
 local function showEditPanel(elem)
     destroyEditPanel()
-    selectedElem = elem
+
+    -- Save undo snapshot (state at the moment user taps)
     undoStates[elem] = {
-        size = elem.Size, pos = elem.Position, trans = elem.BackgroundTransparency
+        size  = elem.Size,
+        pos   = elem.Position,
+        trans = elem.BackgroundTransparency,
     }
 
     local panel = Instance.new("Frame")
-    panel.Size = UDim2.fromOffset(272, 10)
-    panel.Position = UDim2.new(0.5, -136, 0.5, -115)
-    panel.BackgroundColor3 = BG; panel.BackgroundTransparency = 0.04
-    panel.ZIndex = 50
-    corner(panel, 14); stroke(panel, BLUE, 0.38, 1.5)
-    panel.Parent = Root; EditPanel = panel
+    panel.Size = UDim2.fromOffset(274, 10)
+    panel.Position = UDim2.new(0.5, -137, 0.5, -120)
+    panel.BackgroundColor3 = BG; panel.BackgroundTransparency = 0.05; panel.ZIndex = 50
+    uicorner(panel, 14); uistroke(panel, BLUE, 0.36, 1.5)
+    panel.Parent = PanelRoot; EditPanel = panel
+
+    -- Panel itself is draggable
     makeDraggable(panel)
 
-    local pList = vlist(panel, 8); pad(panel, 12, 14, 12, 12)
+    local pList = uivlist(panel, 8)
+    uipad(panel, 12, 14, 12, 12)
 
-    -- Title + close X
+    -- Title row (element name + close X)
     local titleRow = Instance.new("Frame")
     titleRow.Size = UDim2.new(1, 0, 0, 22); titleRow.BackgroundTransparency = 1
     titleRow.LayoutOrder = 0; titleRow.Parent = panel
@@ -476,21 +440,19 @@ local function showEditPanel(elem)
     titleLbl.Size = UDim2.new(1, -26, 1, 0); titleLbl.TextXAlignment = Enum.TextXAlignment.Left
     titleLbl.ZIndex = 51; titleLbl.Parent = titleRow
 
-    local closeX = Instance.new("TextButton")
-    closeX.Text = "✕"; closeX.TextSize = 14; closeX.Font = Enum.Font.GothamBold
-    closeX.TextColor3 = DIM; closeX.BackgroundTransparency = 1
-    closeX.Size = UDim2.fromOffset(22, 22); closeX.Position = UDim2.new(1, -22, 0, 0)
-    closeX.ZIndex = 51; closeX.Parent = titleRow
-    closeX.Activated:Connect(function()
+    local closeBtn = Instance.new("TextButton")
+    closeBtn.Text = "✕"; closeBtn.TextSize = 14; closeBtn.Font = Enum.Font.GothamBold
+    closeBtn.TextColor3 = DIM; closeBtn.BackgroundTransparency = 1
+    closeBtn.Size = UDim2.fromOffset(22, 22); closeBtn.Position = UDim2.new(1, -22, 0, 0)
+    closeBtn.ZIndex = 51; closeBtn.Parent = titleRow
+    closeBtn.Activated:Connect(function()
+        -- Cancel = revert to undo snapshot
         local s = undoStates[elem]
         if s then elem.Size = s.size; elem.Position = s.pos; elem.BackgroundTransparency = s.trans end
         destroyEditPanel()
     end)
 
-    -- Separator
-    local sep = Instance.new("Frame"); sep.Size = UDim2.new(1, 0, 0, 1)
-    sep.BackgroundColor3 = WHT; sep.BackgroundTransparency = 0.84
-    sep.BorderSizePixel = 0; sep.LayoutOrder = 1; sep.Parent = panel
+    uisep(panel, 1)
 
     -- Sliders
     makeSlider(panel, 2, "SIZE", math.max(elem.Size.X.Scale, 0.5), 0.5, 2.0, "%.0f%%",
@@ -499,51 +461,52 @@ local function showEditPanel(elem)
     makeSlider(panel, 3, "TRANSPARENCY", elem.BackgroundTransparency, 0, 1, "%.0f%%",
         function(v) elem.BackgroundTransparency = v end)
 
-    local sep2 = Instance.new("Frame"); sep2.Size = UDim2.new(1, 0, 0, 1)
-    sep2.BackgroundColor3 = WHT; sep2.BackgroundTransparency = 0.84
-    sep2.BorderSizePixel = 0; sep2.LayoutOrder = 4; sep2.Parent = panel
+    uisep(panel, 4)
 
     -- 2×2 action buttons
     local gridFrame = Instance.new("Frame")
     gridFrame.Size = UDim2.new(1, 0, 0, 88); gridFrame.BackgroundTransparency = 1
     gridFrame.LayoutOrder = 5; gridFrame.Parent = panel
-    grid2(gridFrame, 38, 6)
+    uigrid2(gridFrame, 38, 6)
 
     local function pBtn(text, bg, fg, order)
         local b = Instance.new("TextButton"); b.Text = text; b.TextSize = 12
         b.Font = Enum.Font.GothamBold; b.TextColor3 = fg; b.BackgroundColor3 = bg
         b.AutoButtonColor = false; b.LayoutOrder = order; b.ZIndex = 51
-        corner(b, 9); b.Parent = gridFrame; return b
+        uicorner(b, 9); b.Parent = gridFrame; return b
     end
 
     local cancelBtn = pBtn("Cancel",  BGL,  DIM,  1)
     local doneBtn   = pBtn("Done",    BLUD, BLUE, 2)
     local undoBtn   = pBtn("Undo",    BGL,  DIM,  3)
     local resetBtn  = pBtn("Default", BGL,  DIM,  4)
-    stroke(doneBtn, BLUE, 0.45, 1)
+    uistroke(doneBtn, BLUE, 0.42, 1)
 
+    -- Cancel: revert to undo snapshot
     cancelBtn.Activated:Connect(function()
         local s = undoStates[elem]
         if s then elem.Size = s.size; elem.Position = s.pos; elem.BackgroundTransparency = s.trans end
         destroyEditPanel()
     end)
+    -- Done: keep current changes
     doneBtn.Activated:Connect(function() destroyEditPanel() end)
+    -- Undo: revert to undo snapshot but keep panel open
     undoBtn.Activated:Connect(function()
         local s = undoStates[elem]
         if s then elem.Size = s.size; elem.Position = s.pos; elem.BackgroundTransparency = s.trans end
     end)
+    -- Default: restore original state from BEFORE edit mode started
     resetBtn.Activated:Connect(function()
         local o = originalStates[elem]
         if o then elem.Size = o.size; elem.Position = o.pos; elem.BackgroundTransparency = o.trans end
     end)
 
-    fitH(panel, pList, 28)
+    fitHeight(panel, pList, 28)
 end
 
 -- ============================================================
---  HIGHLIGHT ALL EDITABLE ELEMENTS
+--  HIGHLIGHT + MAKE ELEMENTS DRAGGABLE IN EDIT MODE
 -- ============================================================
-
 local function clearHighlights()
     for _, s in pairs(highlightMap) do if s and s.Parent then s:Destroy() end end
     highlightMap = {}; originalStates = {}
@@ -552,86 +515,130 @@ end
 local function highlightAll()
     local function scan(parent)
         for _, obj in ipairs(parent:GetChildren()) do
-            if obj:IsA("GuiObject") and not obj:IsDescendantOf(Root) then
+            if obj:IsA("GuiObject") and not obj:IsDescendantOf(PanelRoot) then
+
+                -- Save original state (for Reset to Default)
                 originalStates[obj] = {
-                    size = obj.Size, pos = obj.Position, trans = obj.BackgroundTransparency
+                    size  = obj.Size,
+                    pos   = obj.Position,
+                    trans = obj.BackgroundTransparency,
                 }
+
+                -- Blue dashed highlight stroke
                 local s = Instance.new("UIStroke")
-                s.Color = BLUE; s.Transparency = 0.38; s.Thickness = 2; s.Parent = obj
+                s.Color = BLUE; s.Transparency = 0.35; s.Thickness = 2; s.Parent = obj
                 highlightMap[obj] = s
 
+                -- Invisible hitbox on top: handles BOTH drag-to-move and tap-to-edit
                 local hitbox = Instance.new("TextButton")
                 hitbox.Size = UDim2.fromScale(1, 1); hitbox.Text = ""
-                hitbox.BackgroundTransparency = 1; hitbox.ZIndex = obj.ZIndex + 1
+                hitbox.BackgroundTransparency = 1; hitbox.ZIndex = obj.ZIndex + 5
                 hitbox.Parent = obj
-                hitbox.Activated:Connect(function()
-                    if editMode then showEditPanel(obj) end
+
+                -- Drag-to-move the game element itself
+                -- Tap (no drag) opens the edit panel
+                local hActive     = false
+                local hStart      = nil
+                local hStartObjPos = nil
+
+                hitbox.InputBegan:Connect(function(input)
+                    if not editMode then return end
+                    if input.UserInputType ~= Enum.UserInputType.Touch
+                    and input.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
+                    hActive      = true
+                    hStart       = Vector2.new(input.Position.X, input.Position.Y)
+                    hStartObjPos = Vector2.new(obj.Position.X.Offset, obj.Position.Y.Offset)
+                end)
+
+                UIS.InputChanged:Connect(function(input)
+                    if not hActive then return end
+                    if input.UserInputType ~= Enum.UserInputType.Touch
+                    and input.UserInputType ~= Enum.UserInputType.MouseMovement then return end
+                    local vp = workspace.CurrentCamera.ViewportSize
+                    local dx = input.Position.X - hStart.X
+                    local dy = input.Position.Y - hStart.Y
+                    -- Keep scale, only move offset
+                    local nx = math.clamp(hStartObjPos.X + dx, 0, vp.X - obj.AbsoluteSize.X)
+                    local ny = math.clamp(hStartObjPos.Y + dy, 0, vp.Y - obj.AbsoluteSize.Y)
+                    obj.Position = UDim2.new(obj.Position.X.Scale, nx, obj.Position.Y.Scale, ny)
+                end)
+
+                UIS.InputEnded:Connect(function(input)
+                    if not hActive then return end
+                    if input.UserInputType ~= Enum.UserInputType.Touch
+                    and input.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
+                    hActive = false
+                    if hStart then
+                        local dx = math.abs(input.Position.X - hStart.X)
+                        local dy = math.abs(input.Position.Y - hStart.Y)
+                        if dx < TAP_PX and dy < TAP_PX then
+                            -- Tap → open edit panel
+                            task.defer(function() showEditPanel(obj) end)
+                        end
+                    end
+                    hStart = nil
                 end)
 
                 scan(obj)
             end
         end
     end
+
     for _, gui in ipairs(PlayerGui:GetChildren()) do
-        if gui ~= Root and gui:IsA("ScreenGui") then scan(gui) end
+        if gui ~= PanelRoot and gui:IsA("ScreenGui") then scan(gui) end
     end
 end
 
 -- ============================================================
---  DIALOGS  (custom, shown over everything)
+--  DIALOGS  (custom floating panels — shown over everything)
 -- ============================================================
-
 local function closeDialog()
     if ActiveDlg and ActiveDlg.Parent then ActiveDlg:Destroy() end
     ActiveDlg = nil
 end
 
-local function makeDialog(borderColor)
+local function makeDialog(borderCol)
     closeDialog()
     local d = Instance.new("Frame")
-    d.Size = UDim2.fromOffset(272, 10)
-    d.Position = UDim2.new(0.5, -136, 0.5, -80)
+    d.Size = UDim2.fromOffset(272, 10); d.Position = UDim2.new(0.5, -136, 0.5, -80)
     d.BackgroundColor3 = BG; d.BackgroundTransparency = 0.04; d.ZIndex = 90
-    corner(d, 14); stroke(d, borderColor or WHT, 0.74, 1.5)
-    ActiveDlg = d; d.Parent = Root; return d
+    uicorner(d, 14); uistroke(d, borderCol or WHT, 0.72, 1.5)
+    ActiveDlg = d; d.Parent = PanelRoot; return d
 end
 
-local function dlgRow(parent, order)
-    local row = Instance.new("Frame")
-    row.Size = UDim2.new(1, 0, 0, 38); row.BackgroundTransparency = 1
-    row.LayoutOrder = order; row.Parent = parent
-    grid2(row, 38, 8); return row
-end
-
-local function dlgBtn(parent, text, bg, fg, order)
+local function mkDlgBtn(parent, text, bg, fg, order)
     local b = Instance.new("TextButton"); b.Text = text; b.TextSize = 12
     b.Font = Enum.Font.GothamBold; b.TextColor3 = fg; b.BackgroundColor3 = bg
     b.AutoButtonColor = false; b.LayoutOrder = order; b.ZIndex = 91
-    corner(b, 9); b.Parent = parent; return b
+    uicorner(b, 9); b.Parent = parent; return b
 end
 
-local function dlgLbl(parent, text, size, color, order)
-    local l = Instance.new("TextLabel"); l.Text = text; l.TextSize = size or 13
-    l.Font = size and Enum.Font.Gotham or Enum.Font.GothamBold
+local function mkDlgLbl(parent, text, size, color, order)
+    local l = Instance.new("TextLabel"); l.Text = text
+    l.TextSize = size or 13; l.Font = (size and size < 13) and Enum.Font.Gotham or Enum.Font.GothamBold
     l.TextColor3 = color or WHT; l.BackgroundTransparency = 1
     l.Size = UDim2.new(1, 0, 0, (size or 13) + 6); l.TextXAlignment = Enum.TextXAlignment.Left
     l.LayoutOrder = order; l.ZIndex = 91; l.Parent = parent; return l
 end
 
-local showExitDialog  -- forward
+-- Forward-declare so dialogs can call each other
+local showExitDialog
 
 local function showDiscardConfirm(onBack)
     local d = makeDialog(RED)
-    local dList = vlist(d, 10); pad(d, 14, 14, 14, 14)
-    dlgLbl(d, "⚠   Are you sure?", 14, RED, 0)
-    dlgLbl(d, "All unsaved edits will be permanently lost.", 11, DIM, 1)
-    local row = dlgRow(d, 2)
-    local backB = dlgBtn(row, "Go Back", BGL,  DIM, 1)
-    local discB = dlgBtn(row, "Discard", REDD, RED, 2)
-    stroke(discB, RED, 0.45, 1); fitH(d, dList, 28)
+    local dList = uivlist(d, 10); uipad(d, 14, 14, 14, 14)
+    mkDlgLbl(d, "⚠   Are you sure?",                       14, RED,  0)
+    mkDlgLbl(d, "All unsaved edits will be lost forever.",  11, DIM,  1)
+    local row = Instance.new("Frame")
+    row.Size = UDim2.new(1, 0, 0, 38); row.BackgroundTransparency = 1
+    row.LayoutOrder = 2; row.Parent = d; uigrid2(row, 38, 8)
+    local backB = mkDlgBtn(row, "Go Back", BGL,  DIM, 1)
+    local discB = mkDlgBtn(row, "Discard", REDD, RED, 2)
+    uistroke(discB, RED, 0.42, 1); fitHeight(d, dList, 28)
 
     backB.Activated:Connect(function() closeDialog(); if onBack then onBack() end end)
     discB.Activated:Connect(function()
+        -- Revert all edited elements
         for elem, orig in pairs(originalStates) do
             if elem and elem.Parent then
                 elem.Size = orig.size; elem.Position = orig.pos; elem.BackgroundTransparency = orig.trans
@@ -639,16 +646,16 @@ local function showDiscardConfirm(onBack)
         end
         closeDialog(); clearHighlights(); destroyEditPanel()
         if ExitBtn and ExitBtn.Parent then ExitBtn:Destroy(); ExitBtn = nil end
-        undoStates = {}; editMode = false; selectedElem = nil
-        statusLabel:Set("Status: Idle  —  Tap 'Enter Edit Mode' to start")
+        undoStates = {}; editMode = false
+        statusLabel:Set("Idle  —  press Enter Edit Mode below")
     end)
 end
 
-local function showSaveNameDialog(elemData)
+local function showSaveDialog(elemData)
     local d = makeDialog(BLUE)
-    local dList = vlist(d, 10); pad(d, 14, 14, 14, 14)
-    dlgLbl(d, "Name Your Layout", 14, WHT, 0)
-    dlgLbl(d, "Game ID " .. PLACE_ID .. " will be locked to this layout.", 10, DIM, 1)
+    local dList = uivlist(d, 10); uipad(d, 14, 14, 14, 14)
+    mkDlgLbl(d, "Name Your Layout",                                  14, WHT, 0)
+    mkDlgLbl(d, "Game ID " .. PLACE_ID .. " will be locked to it.",  10, DIM, 1)
 
     local box = Instance.new("TextBox")
     box.PlaceholderText = "Layout " .. (#layouts + 1); box.Text = ""
@@ -656,33 +663,35 @@ local function showSaveNameDialog(elemData)
     box.PlaceholderColor3 = DIM; box.BackgroundColor3 = BGL
     box.Size = UDim2.new(1, 0, 0, 40); box.LayoutOrder = 2
     box.ClearTextOnFocus = false; box.ZIndex = 92
-    corner(box, 9); stroke(box, BLUE, 0.45, 1); box.Parent = d
+    uicorner(box, 9); uistroke(box, BLUE, 0.42, 1); box.Parent = d
 
-    local row = dlgRow(d, 3)
-    local cancelB = dlgBtn(row, "Cancel", BGL,  DIM,  1)
-    local saveB   = dlgBtn(row, "Save",   BLUD, BLUE, 2)
-    stroke(saveB, BLUE, 0.4, 1); fitH(d, dList, 28)
+    local row = Instance.new("Frame")
+    row.Size = UDim2.new(1, 0, 0, 38); row.BackgroundTransparency = 1
+    row.LayoutOrder = 3; row.Parent = d; uigrid2(row, 38, 8)
+    local cancelB = mkDlgBtn(row, "Cancel", BGL,  DIM,  1)
+    local saveB   = mkDlgBtn(row, "Save",   BLUD, BLUE, 2)
+    uistroke(saveB, BLUE, 0.38, 1); fitHeight(d, dList, 28)
     task.defer(function() pcall(function() box:CaptureFocus() end) end)
 
     local function doSave()
         local name = box.Text ~= "" and box.Text or ("Layout " .. (#layouts + 1))
         table.insert(layouts, {
-            name = name, placeId = PLACE_ID, gameUrl = GAME_URL,
+            name    = name, placeId = PLACE_ID, gameUrl = GAME_URL,
             savedAt = os.time(), elements = elemData,
         })
-        saveLayouts(); refreshDropdown()
+        saveLayouts(); renderLayouts()
         closeDialog(); clearHighlights(); destroyEditPanel()
         if ExitBtn and ExitBtn.Parent then ExitBtn:Destroy(); ExitBtn = nil end
-        undoStates = {}; editMode = false; selectedElem = nil
-        statusLabel:Set("Status: Idle  —  Tap 'Enter Edit Mode' to start")
-        Rayfield:Notify({ Title = "Layout Saved", Content = "\"" .. name .. "\" saved successfully.", Duration = 3 })
+        undoStates = {}; editMode = false
+        statusLabel:Set("Idle  —  press Enter Edit Mode below")
+        Rayfield:Notify({ Title = "Saved", Content = "\"" .. name .. "\" stored.", Duration = 3 })
     end
 
     cancelB.Activated:Connect(function()
         closeDialog(); clearHighlights(); destroyEditPanel()
         if ExitBtn and ExitBtn.Parent then ExitBtn:Destroy(); ExitBtn = nil end
-        undoStates = {}; editMode = false; selectedElem = nil
-        statusLabel:Set("Status: Idle  —  Tap 'Enter Edit Mode' to start")
+        undoStates = {}; editMode = false
+        statusLabel:Set("Idle  —  press Enter Edit Mode below")
     end)
     saveB.Activated:Connect(doSave)
     box.FocusLost:Connect(function(enter) if enter then doSave() end end)
@@ -690,13 +699,15 @@ end
 
 showExitDialog = function()
     local d = makeDialog(WHT)
-    local dList = vlist(d, 10); pad(d, 14, 14, 14, 14)
-    dlgLbl(d, "Exit Edit Mode", 14, WHT, 0)
-    dlgLbl(d, "Save your layout or discard all changes.", 11, DIM, 1)
-    local row = dlgRow(d, 2)
-    local discOpt = dlgBtn(row, "Discard",     BGL,  DIM,  1)
-    local saveOpt = dlgBtn(row, "Save Layout", BLUD, BLUE, 2)
-    stroke(saveOpt, BLUE, 0.4, 1); fitH(d, dList, 28)
+    local dList = uivlist(d, 10); uipad(d, 14, 14, 14, 14)
+    mkDlgLbl(d, "Exit Edit Mode",                              14, WHT, 0)
+    mkDlgLbl(d, "Save your layout or discard all changes.",    11, DIM, 1)
+    local row = Instance.new("Frame")
+    row.Size = UDim2.new(1, 0, 0, 38); row.BackgroundTransparency = 1
+    row.LayoutOrder = 2; row.Parent = d; uigrid2(row, 38, 8)
+    local discOpt = mkDlgBtn(row, "Discard",     BGL,  DIM,  1)
+    local saveOpt = mkDlgBtn(row, "Save Layout", BLUD, BLUE, 2)
+    uistroke(saveOpt, BLUE, 0.38, 1); fitHeight(d, dList, 28)
 
     discOpt.Activated:Connect(function() closeDialog(); showDiscardConfirm(showExitDialog) end)
     saveOpt.Activated:Connect(function()
@@ -712,25 +723,25 @@ showExitDialog = function()
                 }
             end
         end
-        closeDialog(); showSaveNameDialog(elemData)
+        closeDialog(); showSaveDialog(elemData)
     end)
 end
 
 -- ============================================================
 --  ENTER EDIT MODE
 -- ============================================================
-
 function enterEditMode()
     editMode = true
-    statusLabel:Set("Status: Editing  —  Tap any GUI element")
+    statusLabel:Set("Editing  —  drag elements to move  |  tap to edit")
     highlightAll()
 
-    -- Draggable red X exit button
+    -- Draggable red X button
     local xb = Instance.new("Frame")
     xb.Name = "ExitEditBtn"; xb.Size = UDim2.fromOffset(54, 54)
     xb.Position = UDim2.new(0.5, -27, 0, 22)
     xb.BackgroundColor3 = REDD; xb.ZIndex = 60
-    corner(xb, 27); stroke(xb, RED, 0.36, 1.5); xb.Parent = Root; ExitBtn = xb
+    uicorner(xb, 27); uistroke(xb, RED, 0.34, 1.5)
+    xb.Parent = PanelRoot; ExitBtn = xb
 
     local xIcon = Instance.new("TextLabel")
     xIcon.Text = "✕"; xIcon.TextSize = 22; xIcon.Font = Enum.Font.GothamBold
@@ -744,13 +755,12 @@ end
 -- ============================================================
 --  INIT
 -- ============================================================
-
-refreshDropdown()
+renderLayouts()
 
 Rayfield:Notify({
-    Title   = "UI Layout Editor",
-    Content = "Loaded  |  Game ID: " .. PLACE_ID,
+    Title    = "UI Layout Editor",
+    Content  = "Ready  |  Game " .. PLACE_ID,
     Duration = 4,
 })
 
-print("[UILayoutEditor] Loaded — Place ID: " .. PLACE_ID)
+print("[UILayoutEditor v3] Loaded — Place ID: " .. PLACE_ID)
