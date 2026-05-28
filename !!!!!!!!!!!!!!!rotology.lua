@@ -1,0 +1,1303 @@
+-- ═══════════════════════════════════════════════════════
+-- HUD SCRIPT — Auto Farm + ESP + Anti Death + Easy Mode
+-- ═══════════════════════════════════════════════════════
+
+local Players          = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local RunService       = game:GetService("RunService")
+
+local player    = Players.LocalPlayer
+local playerGui = player.PlayerGui
+
+-- ═══════════════════════════════════════════════════════
+-- SCREEN GUI
+-- ═══════════════════════════════════════════════════════
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name              = "MainHUD"
+screenGui.ResetOnSpawn      = false
+screenGui.ZIndexBehavior    = Enum.ZIndexBehavior.Sibling
+screenGui.IgnoreGuiInset    = true
+screenGui.Parent            = playerGui
+
+-- ═══════════════════════════════════════════════════════
+-- DRAGGING UTILITY (works on both PC mouse and mobile touch)
+-- ═══════════════════════════════════════════════════════
+
+local function makeDraggable(frame, handle)
+    handle = handle or frame
+    local dragging  = false
+    local dragInput
+    local dragStart
+    local startPos
+
+    local function update(input)
+        local delta = input.Position - dragStart
+        frame.Position = UDim2.new(
+            startPos.X.Scale, startPos.X.Offset + delta.X,
+            startPos.Y.Scale, startPos.Y.Offset + delta.Y
+        )
+    end
+
+    handle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or
+           input.UserInputType == Enum.UserInputType.Touch then
+            dragging  = true
+            dragStart = input.Position
+            startPos  = frame.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+
+    handle.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or
+           input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            update(input)
+        end
+    end)
+end
+
+-- ═══════════════════════════════════════════════════════
+-- CIRCULAR TOGGLE BUTTON
+-- ═══════════════════════════════════════════════════════
+
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Name              = "ToggleBtn"
+toggleBtn.Size              = UDim2.new(0, 54, 0, 54)
+toggleBtn.Position          = UDim2.new(0, 18, 0.5, -27)
+toggleBtn.BackgroundColor3  = Color3.fromRGB(72, 72, 78)
+toggleBtn.BorderSizePixel   = 0
+toggleBtn.Text              = "☰"
+toggleBtn.TextColor3        = Color3.fromRGB(215, 215, 220)
+toggleBtn.TextSize          = 22
+toggleBtn.Font              = Enum.Font.GothamBold
+toggleBtn.AutoButtonColor   = false
+toggleBtn.ZIndex            = 5
+toggleBtn.Parent            = screenGui
+
+Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(1, 0)
+
+local tbStroke = Instance.new("UIStroke", toggleBtn)
+tbStroke.Color     = Color3.fromRGB(110, 110, 120)
+tbStroke.Thickness = 1.5
+
+makeDraggable(toggleBtn)
+
+-- ═══════════════════════════════════════════════════════
+-- MAIN MENU FRAME  (40 % screen width)
+-- ═══════════════════════════════════════════════════════
+
+local MENU_W   = UDim2.new(0.40, 0, 0, 500)
+local mainMenu = Instance.new("Frame")
+mainMenu.Name              = "MainMenu"
+mainMenu.Size              = MENU_W
+mainMenu.Position          = UDim2.new(0.30, 0, 0.08, 0)
+mainMenu.BackgroundColor3  = Color3.fromRGB(16, 16, 20)
+mainMenu.BorderSizePixel   = 0
+mainMenu.Visible           = false
+mainMenu.Active            = true
+mainMenu.ZIndex            = 4
+mainMenu.Parent            = screenGui
+
+Instance.new("UICorner", mainMenu).CornerRadius = UDim.new(0, 12)
+
+local menuStroke = Instance.new("UIStroke", mainMenu)
+menuStroke.Color     = Color3.fromRGB(50, 50, 62)
+menuStroke.Thickness = 1
+
+-- ── Title bar ────────────────────────────────────────
+
+local titleBar = Instance.new("Frame")
+titleBar.Size              = UDim2.new(1, 0, 0, 44)
+titleBar.BackgroundColor3  = Color3.fromRGB(22, 22, 28)
+titleBar.BorderSizePixel   = 0
+titleBar.ZIndex            = 5
+titleBar.Parent            = mainMenu
+
+local tbCorner = Instance.new("UICorner", titleBar)
+tbCorner.CornerRadius = UDim.new(0, 12)
+
+local tbFix = Instance.new("Frame")
+tbFix.Size             = UDim2.new(1, 0, 0.5, 0)
+tbFix.Position         = UDim2.new(0, 0, 0.5, 0)
+tbFix.BackgroundColor3 = Color3.fromRGB(22, 22, 28)
+tbFix.BorderSizePixel  = 0
+tbFix.ZIndex           = 5
+tbFix.Parent           = titleBar
+
+local titleLbl = Instance.new("TextLabel")
+titleLbl.Size               = UDim2.new(1, -96, 1, 0)
+titleLbl.Position           = UDim2.new(0, 14, 0, 0)
+titleLbl.BackgroundTransparency = 1
+titleLbl.Text               = "HUD Menu"
+titleLbl.TextColor3         = Color3.fromRGB(225, 225, 232)
+titleLbl.TextSize           = 15
+titleLbl.Font               = Enum.Font.GothamBold
+titleLbl.TextXAlignment     = Enum.TextXAlignment.Left
+titleLbl.ZIndex             = 6
+titleLbl.Parent             = titleBar
+
+local closeMenuBtn = Instance.new("TextButton")
+closeMenuBtn.Size            = UDim2.new(0, 28, 0, 28)
+closeMenuBtn.Position        = UDim2.new(1, -36, 0, 8)
+closeMenuBtn.BackgroundColor3 = Color3.fromRGB(175, 50, 50)
+closeMenuBtn.Text            = "✕"
+closeMenuBtn.TextColor3      = Color3.fromRGB(255, 255, 255)
+closeMenuBtn.TextSize        = 13
+closeMenuBtn.Font            = Enum.Font.GothamBold
+closeMenuBtn.BorderSizePixel = 0
+closeMenuBtn.ZIndex          = 6
+closeMenuBtn.Parent          = titleBar
+Instance.new("UICorner", closeMenuBtn).CornerRadius = UDim.new(0, 6)
+
+closeMenuBtn.MouseButton1Click:Connect(function()
+    mainMenu.Visible = false
+end)
+
+makeDraggable(mainMenu, titleBar)
+
+-- ── Tab bar ──────────────────────────────────────────
+
+local tabBar = Instance.new("Frame")
+tabBar.Size              = UDim2.new(1, -24, 0, 34)
+tabBar.Position          = UDim2.new(0, 12, 0, 52)
+tabBar.BackgroundColor3  = Color3.fromRGB(22, 22, 28)
+tabBar.BorderSizePixel   = 0
+tabBar.ZIndex            = 5
+tabBar.Parent            = mainMenu
+Instance.new("UICorner", tabBar).CornerRadius = UDim.new(0, 8)
+
+local tabLayout = Instance.new("UIListLayout", tabBar)
+tabLayout.FillDirection = Enum.FillDirection.Horizontal
+tabLayout.SortOrder     = Enum.SortOrder.LayoutOrder
+tabLayout.Padding       = UDim.new(0, 4)
+
+local tabPad = Instance.new("UIPadding", tabBar)
+tabPad.PaddingLeft   = UDim.new(0, 4)
+tabPad.PaddingRight  = UDim.new(0, 4)
+tabPad.PaddingTop    = UDim.new(0, 4)
+tabPad.PaddingBottom = UDim.new(0, 4)
+
+local function newTabBtn(label, order)
+    local b = Instance.new("TextButton")
+    b.Size              = UDim2.new(0.5, -4, 1, 0)
+    b.BackgroundColor3  = Color3.fromRGB(32, 32, 42)
+    b.Text              = label
+    b.TextColor3        = Color3.fromRGB(155, 155, 165)
+    b.TextSize          = 13
+    b.Font              = Enum.Font.GothamSemibold
+    b.BorderSizePixel   = 0
+    b.LayoutOrder       = order
+    b.ZIndex            = 6
+    b.Parent            = tabBar
+    Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6)
+    return b
+end
+
+local tabAutoFarm = newTabBtn("Auto Farm", 1)
+local tabESP      = newTabBtn("ESP",       2)
+
+-- ── Scrollable content area ───────────────────────────
+
+local scrollFrame = Instance.new("ScrollingFrame")
+scrollFrame.Size                  = UDim2.new(1, -24, 1, -182)
+scrollFrame.Position              = UDim2.new(0, 12, 0, 94)
+scrollFrame.BackgroundTransparency = 1
+scrollFrame.BorderSizePixel       = 0
+scrollFrame.ScrollBarThickness    = 3
+scrollFrame.ScrollBarImageColor3  = Color3.fromRGB(70, 70, 85)
+scrollFrame.CanvasSize            = UDim2.new(0, 0, 0, 0)
+scrollFrame.AutomaticCanvasSize   = Enum.AutomaticSize.Y
+scrollFrame.ClipsDescendants      = true
+scrollFrame.ZIndex                = 5
+scrollFrame.Parent                = mainMenu
+
+-- ═══════════════════════════════════════════════════════
+-- SHARED UI HELPERS
+-- ═══════════════════════════════════════════════════════
+
+local COL_ROW = Color3.fromRGB(22, 22, 30)
+local COL_OFF = Color3.fromRGB(52, 52, 64)
+local COL_ON  = Color3.fromRGB(38, 155, 78)
+local COL_TXT = Color3.fromRGB(200, 200, 212)
+local COL_DIM = Color3.fromRGB(140, 140, 155)
+
+local function applyToggleVisual(btn, state)
+    if state then
+        btn.BackgroundColor3 = COL_ON
+        btn.Text             = "ON"
+        btn.TextColor3       = Color3.fromRGB(255, 255, 255)
+    else
+        btn.BackgroundColor3 = COL_OFF
+        btn.Text             = "OFF"
+        btn.TextColor3       = Color3.fromRGB(180, 180, 192)
+    end
+end
+
+local function makeToggleRow(parent, label, yOrder, extraH)
+    extraH = extraH or 0
+    local row = Instance.new("Frame")
+    row.Size             = UDim2.new(1, 0, 0, 40 + extraH)
+    row.BackgroundColor3 = COL_ROW
+    row.BorderSizePixel  = 0
+    row.LayoutOrder      = yOrder
+    row.ZIndex           = 6
+    row.Parent           = parent
+    Instance.new("UICorner", row).CornerRadius = UDim.new(0, 8)
+
+    local lbl = Instance.new("TextLabel")
+    lbl.Size               = UDim2.new(1, -88, 0, 40)
+    lbl.Position           = UDim2.new(0, 12, 0, 0)
+    lbl.BackgroundTransparency = 1
+    lbl.Text               = label
+    lbl.TextColor3         = COL_TXT
+    lbl.TextSize           = 12
+    lbl.Font               = Enum.Font.GothamSemibold
+    lbl.TextXAlignment     = Enum.TextXAlignment.Left
+    lbl.ZIndex             = 7
+    lbl.Parent             = row
+
+    local btn = Instance.new("TextButton")
+    btn.Size             = UDim2.new(0, 56, 0, 26)
+    btn.Position         = UDim2.new(1, -64, 0, 7)
+    btn.BackgroundColor3 = COL_OFF
+    btn.Text             = "OFF"
+    btn.TextColor3       = Color3.fromRGB(180, 180, 192)
+    btn.TextSize         = 12
+    btn.Font             = Enum.Font.GothamBold
+    btn.BorderSizePixel  = 0
+    btn.ZIndex           = 7
+    btn.Parent           = row
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+
+    return btn, row
+end
+
+local function addSubLabel(row, text, yOffset)
+    local lbl = Instance.new("TextLabel")
+    lbl.Size               = UDim2.new(0.55, 0, 0, 20)
+    lbl.Position           = UDim2.new(0, 12, 0, yOffset)
+    lbl.BackgroundTransparency = 1
+    lbl.Text               = text
+    lbl.TextColor3         = COL_DIM
+    lbl.TextSize           = 11
+    lbl.Font               = Enum.Font.Gotham
+    lbl.TextXAlignment     = Enum.TextXAlignment.Left
+    lbl.ZIndex             = 7
+    lbl.Parent             = row
+    return lbl
+end
+
+local function addInputBox(row, default, yOffset)
+    local box = Instance.new("TextBox")
+    box.Size             = UDim2.new(0, 76, 0, 22)
+    box.Position         = UDim2.new(1, -86, 0, yOffset)
+    box.BackgroundColor3 = Color3.fromRGB(28, 28, 36)
+    box.Text             = tostring(default)
+    box.TextColor3       = Color3.fromRGB(220, 220, 232)
+    box.TextSize         = 11
+    box.Font             = Enum.Font.Gotham
+    box.ClearTextOnFocus = false
+    box.BorderSizePixel  = 0
+    box.ZIndex           = 7
+    box.Parent           = row
+    Instance.new("UICorner", box).CornerRadius = UDim.new(0, 5)
+    local s = Instance.new("UIStroke", box)
+    s.Color     = Color3.fromRGB(55, 55, 70)
+    s.Thickness = 1
+    return box
+end
+
+-- ═══════════════════════════════════════════════════════
+-- AUTO FARM PANEL
+-- ═══════════════════════════════════════════════════════
+
+local afPanel = Instance.new("Frame")
+afPanel.Size              = UDim2.new(1, 0, 0, 0)
+afPanel.AutomaticSize     = Enum.AutomaticSize.Y
+afPanel.BackgroundTransparency = 1
+afPanel.ZIndex            = 6
+afPanel.Parent            = scrollFrame
+
+local afPanelLayout = Instance.new("UIListLayout", afPanel)
+afPanelLayout.SortOrder = Enum.SortOrder.LayoutOrder
+afPanelLayout.Padding   = UDim.new(0, 6)
+
+-- Status row
+local afStatusRow = Instance.new("Frame")
+afStatusRow.Size             = UDim2.new(1, 0, 0, 34)
+afStatusRow.BackgroundColor3 = COL_ROW
+afStatusRow.BorderSizePixel  = 0
+afStatusRow.LayoutOrder      = 0
+afStatusRow.ZIndex           = 6
+afStatusRow.Parent           = afPanel
+Instance.new("UICorner", afStatusRow).CornerRadius = UDim.new(0, 8)
+
+local afStatusLbl = Instance.new("TextLabel")
+afStatusLbl.Size               = UDim2.new(1, -16, 1, 0)
+afStatusLbl.Position           = UDim2.new(0, 12, 0, 0)
+afStatusLbl.BackgroundTransparency = 1
+afStatusLbl.Text               = "Status: Idle"
+afStatusLbl.TextColor3         = COL_DIM
+afStatusLbl.TextSize           = 11
+afStatusLbl.Font               = Enum.Font.Gotham
+afStatusLbl.TextXAlignment     = Enum.TextXAlignment.Left
+afStatusLbl.ZIndex             = 7
+afStatusLbl.Parent             = afStatusRow
+
+-- Toggle rows
+local afToggleBtn,  _            = makeToggleRow(afPanel, "Auto Farm",            1)
+local afAutoSellBtn, _           = makeToggleRow(afPanel, "Auto Sell (10 items)", 2)
+
+-- Sell All button
+local afSellRow = Instance.new("Frame")
+afSellRow.Size             = UDim2.new(1, 0, 0, 38)
+afSellRow.BackgroundColor3 = Color3.fromRGB(130, 38, 38)
+afSellRow.BorderSizePixel  = 0
+afSellRow.LayoutOrder      = 3
+afSellRow.ZIndex           = 6
+afSellRow.Parent           = afPanel
+Instance.new("UICorner", afSellRow).CornerRadius = UDim.new(0, 8)
+
+local afSellAllBtn = Instance.new("TextButton")
+afSellAllBtn.Size               = UDim2.new(1, 0, 1, 0)
+afSellAllBtn.BackgroundTransparency = 1
+afSellAllBtn.Text               = "Sell All"
+afSellAllBtn.TextColor3         = Color3.fromRGB(255, 255, 255)
+afSellAllBtn.TextSize           = 13
+afSellAllBtn.Font               = Enum.Font.GothamBold
+afSellAllBtn.BorderSizePixel    = 0
+afSellAllBtn.ZIndex             = 7
+afSellAllBtn.Parent             = afSellRow
+
+-- Easy Mode row (toggle + HP input)
+local easyModeBtn, easyModeRow = makeToggleRow(afPanel, "Easy Mode", 4, 32)
+addSubLabel(easyModeRow, "TP at HP ≤", 41)
+local easyModeHPInput = addInputBox(easyModeRow, 50, 39)
+easyModeHPInput.PlaceholderText = "HP"
+
+-- TP to Safe button
+local tpSafeRow = Instance.new("Frame")
+tpSafeRow.Size             = UDim2.new(1, 0, 0, 38)
+tpSafeRow.BackgroundColor3 = Color3.fromRGB(38, 80, 160)
+tpSafeRow.BorderSizePixel  = 0
+tpSafeRow.LayoutOrder      = 5
+tpSafeRow.ZIndex           = 6
+tpSafeRow.Parent           = afPanel
+Instance.new("UICorner", tpSafeRow).CornerRadius = UDim.new(0, 8)
+
+local tpSafeBtn = Instance.new("TextButton")
+tpSafeBtn.Size               = UDim2.new(1, 0, 1, 0)
+tpSafeBtn.BackgroundTransparency = 1
+tpSafeBtn.Text               = "⟵ Teleport to Safe Spot"
+tpSafeBtn.TextColor3         = Color3.fromRGB(200, 220, 255)
+tpSafeBtn.TextSize           = 13
+tpSafeBtn.Font               = Enum.Font.GothamBold
+tpSafeBtn.BorderSizePixel    = 0
+tpSafeBtn.ZIndex             = 7
+tpSafeBtn.Parent             = tpSafeRow
+
+-- ─── Constants & State ───────────────────────────────
+
+local SAFE_POS = Vector3.new(-671, 672, -91)
+
+local autoFarmOn    = false
+local autoSellOn    = false
+local farmTask      = nil
+local itemsCollected = 0
+
+local character = player.Character or player.CharacterAdded:Wait()
+local hrp       = character:FindFirstChild("HumanoidRootPart")
+
+local stuckItems    = {}
+local lastPos       = nil
+local stuckSince    = nil
+local STUCK_TIMEOUT = 2.5
+
+local BANNED_ANCESTORS = { "MeatMountain" }
+local PRIORITY_NAMES   = { "Watch", "Blueprint" }
+local NORMAL_NAMES     = { "Documents", "Document", "EightBall", "Eightball", "Disc" }
+
+local function isBanned(obj)
+    local cur = obj.Parent
+    while cur and cur ~= workspace do
+        for _, ban in ipairs(BANNED_ANCESTORS) do
+            if cur.Name == ban then return true end
+        end
+        cur = cur.Parent
+    end
+    return false
+end
+
+local function matchesAny(name, list)
+    local low = name:lower()
+    for _, n in ipairs(list) do
+        if low == n:lower() or low:find(n:lower(), 1, true) then return true end
+    end
+    return false
+end
+
+local function resolveBasePart(obj)
+    if obj:IsA("BasePart") then return obj end
+    if obj:IsA("Model")    then return obj:FindFirstChildWhichIsA("BasePart") end
+    return nil
+end
+
+local function findFarmItems()
+    local priority, normal = {}, {}
+    local seenParts = {}
+
+    local function addTo(list, part)
+        if seenParts[part] or stuckItems[part] then return end
+        seenParts[part] = true
+        table.insert(list, part)
+    end
+
+    for _, pName in ipairs(PRIORITY_NAMES) do
+        local obj = workspace:FindFirstChild(pName)
+        if obj then
+            local part = resolveBasePart(obj)
+            if part and not isBanned(part) then addTo(priority, part) end
+        end
+    end
+
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if obj:IsA("ProximityPrompt") then
+            local parent = obj.Parent
+            if parent then
+                local part = resolveBasePart(parent)
+                if part and not stuckItems[part] and not isBanned(part) then
+                    if matchesAny(parent.Name, PRIORITY_NAMES) then
+                        addTo(priority, part)
+                    elseif matchesAny(parent.Name, NORMAL_NAMES) then
+                        addTo(normal, part)
+                    end
+                end
+            end
+        elseif obj:IsA("BasePart") or obj:IsA("Model") then
+            local part = resolveBasePart(obj)
+            if part and not stuckItems[part] and not isBanned(part) then
+                if matchesAny(obj.Name, PRIORITY_NAMES) then
+                    addTo(priority, part)
+                elseif matchesAny(obj.Name, NORMAL_NAMES) then
+                    addTo(normal, part)
+                end
+            end
+        end
+    end
+
+    local all = {}
+    for _, v in ipairs(priority) do table.insert(all, v) end
+    for _, v in ipairs(normal)   do table.insert(all, v) end
+    return all
+end
+
+local function getClosest()
+    if not hrp then return nil, math.huge end
+    local items = findFarmItems()
+    local best, bestDist = nil, math.huge
+    for _, item in ipairs(items) do
+        if item and item.Parent then
+            local d = (hrp.Position - item.Position).Magnitude
+            if d < bestDist then bestDist = d; best = item end
+        end
+    end
+    return best, bestDist
+end
+
+local function tpToItem(item)
+    if not item or not hrp then return end
+    local hum = character:FindFirstChild("Humanoid")
+    if hum then hum:ChangeState(Enum.HumanoidStateType.Physics) end
+    pcall(function()
+        hrp.CFrame   = CFrame.new(item.Position + Vector3.new(0, 3, 0))
+        hrp.Velocity = Vector3.zero
+    end)
+    task.wait(0.05)
+    if hum then hum:ChangeState(Enum.HumanoidStateType.Running) end
+end
+
+local function collectItem(item)
+    if not item or not item.Parent or not item:IsA("BasePart") then
+        stuckItems[item] = true
+        return false
+    end
+    local prompt  = item:FindFirstChildWhichIsA("ProximityPrompt")
+    local clicker = item:FindFirstChildWhichIsA("ClickDetector")
+    if prompt then
+        prompt.HoldDuration          = 0
+        prompt.RequiresLineOfSight   = false
+        prompt.MaxActivationDistance = 100
+        fireproximityprompt(prompt)
+    elseif clicker then
+        fireclickdetector(clicker)
+    elseif item.CanTouch then
+        local root = character:FindFirstChild("HumanoidRootPart")
+        if root then
+            firetouchinterest(root, item, 0)
+            task.wait(0.04)
+            firetouchinterest(root, item, 1)
+        end
+    else
+        stuckItems[item] = true
+        return false
+    end
+    task.wait(0.28)
+    return not item.Parent
+end
+
+-- ─── Sell Logic ───────────────────────────────────────
+
+local function sellAll()
+    local remote = nil
+    for _, obj in ipairs(game:GetService("ReplicatedStorage"):GetDescendants()) do
+        if obj:IsA("RemoteEvent") and obj.Name:lower():find("sell") then
+            remote = obj
+            break
+        end
+    end
+    if remote then
+        remote:FireServer("sellAll")
+        afStatusLbl.Text = "Status: Sold!"
+        itemsCollected   = 0
+    else
+        afStatusLbl.Text = "Status: No sell remote"
+    end
+end
+
+afSellAllBtn.MouseButton1Click:Connect(sellAll)
+
+afAutoSellBtn.MouseButton1Click:Connect(function()
+    autoSellOn = not autoSellOn
+    applyToggleVisual(afAutoSellBtn, autoSellOn)
+end)
+
+-- ─── Stuck Check ──────────────────────────────────────
+
+local function checkStuck()
+    if not hrp then return false end
+    local cur = hrp.Position
+    if lastPos then
+        if (cur - lastPos).Magnitude < 1 then
+            if not stuckSince then stuckSince = tick()
+            elseif tick() - stuckSince > STUCK_TIMEOUT then return true end
+        else stuckSince = nil end
+    end
+    lastPos = cur
+    return false
+end
+
+local function startFarming()
+    if farmTask then task.cancel(farmTask); farmTask = nil end
+    farmTask = task.spawn(function()
+        while autoFarmOn do
+            character = player.Character
+            if not character then task.wait(0.5); continue end
+            hrp = character:FindFirstChild("HumanoidRootPart")
+            if not hrp then task.wait(0.5); continue end
+
+            if checkStuck() then
+                afStatusLbl.Text = "Status: Unsticking..."
+                pcall(function() hrp.CFrame = hrp.CFrame + Vector3.new(0, 12, 0) end)
+                task.wait(0.5)
+                lastPos = nil; stuckSince = nil
+            end
+
+            local item, dist = getClosest()
+            if item then
+                afStatusLbl.Text = "Status: Farming " .. item.Name .. " (" .. itemsCollected .. ")"
+                if dist > 5 then
+                    tpToItem(item)
+                    task.wait(0.05)
+                end
+                local ok = collectItem(item)
+                if ok then
+                    itemsCollected = itemsCollected + 1
+                    if autoSellOn and itemsCollected >= 10 then
+                        afStatusLbl.Text = "Status: Auto-selling..."
+                        sellAll()
+                        task.wait(0.5)
+                    end
+                elseif dist < 3 then
+                    stuckItems[item] = true
+                end
+            else
+                afStatusLbl.Text = "Status: No items found (" .. itemsCollected .. " held)"
+                task.wait(1)
+            end
+            task.wait(0.05)
+        end
+    end)
+end
+
+afToggleBtn.MouseButton1Click:Connect(function()
+    autoFarmOn = not autoFarmOn
+    applyToggleVisual(afToggleBtn, autoFarmOn)
+    if autoFarmOn then
+        stuckItems       = {}
+        afStatusLbl.Text = "Status: Active"
+        startFarming()
+    else
+        afStatusLbl.Text = "Status: Idle"
+        if farmTask then task.cancel(farmTask); farmTask = nil end
+    end
+end)
+
+-- TP to Safe button
+tpSafeBtn.MouseButton1Click:Connect(function()
+    local char = player.Character
+    if not char then return end
+    local root = char:FindFirstChild("HumanoidRootPart")
+    if root then
+        pcall(function() root.CFrame = CFrame.new(SAFE_POS) end)
+    end
+end)
+
+-- ═══════════════════════════════════════════════════════
+-- EASY MODE
+-- ═══════════════════════════════════════════════════════
+
+local easyModeOn          = false
+local easyModeHPThreshold = 50
+local easyModeParts       = {}
+local easyModeRefreshPending = false
+
+-- Target definitions: each has a finder function and watch hints for map reloads
+local EASY_TARGETS = {
+    {
+        -- workspace.Fan.Fan_Blade — name-based (primary), path fallback
+        find = function()
+            local fan = workspace:FindFirstChild("Fan")
+            if not fan then return nil end
+            return fan:FindFirstChild("Fan_Blade")
+        end,
+        watchName       = "Fan_Blade",
+        watchParentName = "Fan",
+    },
+    {
+        -- workspace.Fan:GetChildren()[36] — index-based with Fan anchor
+        find = function()
+            local fan = workspace:FindFirstChild("Fan")
+            if not fan then return nil end
+            local children = fan:GetChildren()
+            return children[36]
+        end,
+        watchName       = nil,
+        watchParentName = "Fan",
+    },
+    {
+        -- workspace:GetChildren()[330].Tenderizer.Main
+        -- Name scan first (more robust), index fallback
+        find = function()
+            for _, obj in ipairs(workspace:GetDescendants()) do
+                if obj.Name == "Tenderizer" then
+                    local m = obj:FindFirstChild("Main")
+                    if m then return m end
+                end
+            end
+            local children = workspace:GetChildren()
+            local parent330 = children[330]
+            if parent330 then
+                local tender = parent330:FindFirstChild("Tenderizer")
+                if tender then return tender:FindFirstChild("Main") end
+            end
+            return nil
+        end,
+        watchName       = "Main",
+        watchParentName = "Tenderizer",
+    },
+    {
+        -- workspace.PillarRoom1.Parts.Floor — name-based (primary), path fallback
+        find = function()
+            local pr = workspace:FindFirstChild("PillarRoom1")
+            if not pr then return nil end
+            local parts = pr:FindFirstChild("Parts")
+            if not parts then return nil end
+            return parts:FindFirstChild("Floor")
+        end,
+        watchName       = "Floor",
+        watchParentName = "Parts",
+    },
+}
+
+local function clearEasyModeParts()
+    for _, p in ipairs(easyModeParts) do
+        pcall(function()
+            if p and p.Parent then p:Destroy() end
+        end)
+    end
+    easyModeParts = {}
+end
+
+local function setupEasyModeParts()
+    clearEasyModeParts()
+    if not easyModeOn then return end
+
+    for _, def in ipairs(EASY_TARGETS) do
+        local ok, targetPart = pcall(def.find)
+        if not ok or not targetPart then continue end
+        if not targetPart:IsA("BasePart") then continue end
+
+        local partOk, ep = pcall(function()
+            local p = Instance.new("Part")
+            p.Size         = Vector3.new(targetPart.Size.X, targetPart.Size.Y * 2, targetPart.Size.Z)
+            p.CFrame       = targetPart.CFrame
+            p.Transparency = 1
+            p.CanCollide   = false
+            p.Anchored     = false
+            p.Name         = "_EasyModePart"
+
+            local weld  = Instance.new("WeldConstraint")
+            weld.Part0  = p
+            weld.Part1  = targetPart
+            weld.Parent = p
+
+            p.Parent = workspace
+            return p
+        end)
+
+        if partOk and ep then
+            table.insert(easyModeParts, ep)
+
+            -- Touched: teleport player back to safe spot
+            ep.Touched:Connect(function(hit)
+                if not easyModeOn then return end
+                local char = player.Character
+                if not char then return end
+                if not hit:IsDescendantOf(char) then return end
+                local root = char:FindFirstChild("HumanoidRootPart")
+                if root then
+                    pcall(function() root.CFrame = CFrame.new(SAFE_POS) end)
+                end
+            end)
+        end
+    end
+end
+
+-- Debounced refresh: waits for map to finish loading before re-scanning
+local function scheduleEasyModeRefresh()
+    if easyModeRefreshPending then return end
+    easyModeRefreshPending = true
+    task.delay(2, function()
+        easyModeRefreshPending = false
+        if easyModeOn then setupEasyModeParts() end
+    end)
+end
+
+-- Watch for map reloads: when relevant parts appear, auto-reattach
+workspace.DescendantAdded:Connect(function(desc)
+    if not easyModeOn then return end
+    local dName  = desc.Name
+    local pName  = desc.Parent and desc.Parent.Name or ""
+    for _, def in ipairs(EASY_TARGETS) do
+        if (def.watchName and dName == def.watchName) or
+           (def.watchParentName and (dName == def.watchParentName or pName == def.watchParentName)) then
+            scheduleEasyModeRefresh()
+            return
+        end
+    end
+end)
+
+-- Also catch a full map swap (top-level workspace child added)
+workspace.ChildAdded:Connect(function()
+    if easyModeOn then scheduleEasyModeRefresh() end
+end)
+
+easyModeBtn.MouseButton1Click:Connect(function()
+    easyModeOn = not easyModeOn
+    applyToggleVisual(easyModeBtn, easyModeOn)
+    if easyModeOn then
+        setupEasyModeParts()
+    else
+        clearEasyModeParts()
+    end
+end)
+
+easyModeHPInput.FocusLost:Connect(function()
+    local v = tonumber(easyModeHPInput.Text)
+    if v and v > 0 and v <= 100 then
+        easyModeHPThreshold = v
+    else
+        easyModeHPInput.Text = tostring(easyModeHPThreshold)
+    end
+end)
+
+-- ═══════════════════════════════════════════════════════
+-- ESP PANEL
+-- ═══════════════════════════════════════════════════════
+
+local espPanel = Instance.new("Frame")
+espPanel.Size              = UDim2.new(1, 0, 0, 0)
+espPanel.AutomaticSize     = Enum.AutomaticSize.Y
+espPanel.BackgroundTransparency = 1
+espPanel.Visible           = false
+espPanel.ZIndex            = 6
+espPanel.Parent            = scrollFrame
+
+local espPanelLayout = Instance.new("UIListLayout", espPanel)
+espPanelLayout.SortOrder = Enum.SortOrder.LayoutOrder
+espPanelLayout.Padding   = UDim.new(0, 6)
+
+local espPlayerBtn, espPlayerRow = makeToggleRow(espPanel, "ESP Player", 1, 30)
+addSubLabel(espPlayerRow, "Max render (studs):", 40)
+local espCapInput = addInputBox(espPlayerRow, 200, 38)
+
+local espNPCBtn,   _ = makeToggleRow(espPanel, "ESP NPC",   2)
+local espItemsBtn, _ = makeToggleRow(espPanel, "ESP Items", 3)
+local espExitBtn,  _ = makeToggleRow(espPanel, "ESP Exit",  4)
+
+-- ─── ESP State ────────────────────────────────────────
+
+local espPlayerOn       = false
+local espNPCOn          = false
+local espItemsOn        = false
+local espExitOn         = false
+local espPlayerMaxStuds = 200
+
+espCapInput.FocusLost:Connect(function()
+    local v = tonumber(espCapInput.Text)
+    if v and v > 0 then espPlayerMaxStuds = v
+    else espCapInput.Text = tostring(espPlayerMaxStuds) end
+end)
+
+local espHL = { players = {}, npcs = {}, items = {}, exits = {} }
+
+local function clearESP(cat)
+    for _, h in ipairs(espHL[cat]) do
+        if h and h.Parent then h:Destroy() end
+    end
+    espHL[cat] = {}
+end
+
+local NPC_NAMES  = { "Rotologist", "Shannon", "Tom Cruise" }
+local ITEM_NAMES = { "Watch", "Disc", "Blueprint", "Documents", "EightBall" }
+
+local function nameInList(name, list)
+    for _, n in ipairs(list) do
+        if name == n then return true end
+    end
+    return false
+end
+
+local function nameInListFuzzy(name, list)
+    local low = name:lower()
+    for _, n in ipairs(list) do
+        if low == n:lower() then return true end
+    end
+    return false
+end
+
+local CLOSE_STUD_THRESHOLD = 20
+
+local function playerFillTrans(dist, maxD)
+    if dist >= maxD then return 1 end
+    if dist <= CLOSE_STUD_THRESHOLD then return 0.90 end
+    local t = (dist - CLOSE_STUD_THRESHOLD) / (maxD - CLOSE_STUD_THRESHOLD)
+    return 0.80 + 0.20 * t
+end
+
+local function playerTextTrans(dist, maxD)
+    return math.clamp(playerFillTrans(dist, maxD), 0, 0.9)
+end
+
+local function npcFillTrans(dist)
+    local t = math.clamp((dist - 5) / 65, 0, 1)
+    return t * 0.90
+end
+
+-- ─── ESP Update functions ────────────────────────────
+
+local function updatePlayerESP()
+    clearESP("players")
+    if not espPlayerOn then return end
+    local myChar = player.Character
+    if not myChar then return end
+    local myRoot = myChar:FindFirstChild("HumanoidRootPart")
+
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p == player then continue end
+        local char = p.Character
+        if not char then continue end
+
+        local root = char:FindFirstChild("HumanoidRootPart")
+        local dist = (myRoot and root)
+            and (myRoot.Position - root.Position).Magnitude or 999
+
+        if dist > espPlayerMaxStuds then continue end
+
+        local ft  = playerFillTrans(dist, espPlayerMaxStuds)
+        local ot  = math.clamp(ft + 0.15, 0, 1)
+        local txt = playerTextTrans(dist, espPlayerMaxStuds)
+
+        local hl = Instance.new("Highlight")
+        hl.FillColor           = Color3.fromRGB(55, 115, 255)
+        hl.OutlineColor        = Color3.fromRGB(110, 160, 255)
+        hl.FillTransparency    = ft
+        hl.OutlineTransparency = ot
+        hl.Adornee             = char
+        hl.Parent              = char
+        table.insert(espHL.players, hl)
+
+        local adornee = root or char:FindFirstChildWhichIsA("BasePart")
+        if not adornee then continue end
+
+        local bb = Instance.new("BillboardGui")
+        bb.Size        = UDim2.new(0, 150, 0, 48)
+        bb.StudsOffset = Vector3.new(0, 3.5, 0)
+        bb.AlwaysOnTop = true
+        bb.Adornee     = adornee
+        bb.Parent      = char
+        table.insert(espHL.players, bb)
+
+        local tool = char:FindFirstChildWhichIsA("Tool")
+
+        if tool then
+            local itemLbl = Instance.new("TextLabel")
+            itemLbl.Size               = UDim2.new(1, 0, 0.5, 0)
+            itemLbl.Position           = UDim2.new(0, 0, 0, 0)
+            itemLbl.BackgroundTransparency = 1
+            itemLbl.Text               = "[" .. tool.Name .. "]"
+            itemLbl.TextColor3         = Color3.fromRGB(195, 218, 255)
+            itemLbl.TextSize           = 11
+            itemLbl.Font               = Enum.Font.Gotham
+            itemLbl.TextStrokeTransparency = 0.4
+            itemLbl.TextTransparency   = txt
+            itemLbl.Parent             = bb
+        end
+
+        local nameLbl = Instance.new("TextLabel")
+        nameLbl.Size               = UDim2.new(1, 0, 0.5, 0)
+        nameLbl.Position           = UDim2.new(0, 0, tool and 0.5 or 0.25, 0)
+        nameLbl.BackgroundTransparency = 1
+        nameLbl.Text               = p.Name
+        nameLbl.TextColor3         = Color3.fromRGB(140, 185, 255)
+        nameLbl.TextSize           = 13
+        nameLbl.Font               = Enum.Font.GothamBold
+        nameLbl.TextStrokeTransparency = 0.4
+        nameLbl.TextTransparency   = txt
+        nameLbl.Parent             = bb
+    end
+end
+
+local function updateNPCESP()
+    clearESP("npcs")
+    if not espNPCOn then return end
+    local myChar = player.Character
+    local myRoot = myChar and myChar:FindFirstChild("HumanoidRootPart")
+
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if obj:IsA("Model") and nameInList(obj.Name, NPC_NAMES) then
+            local npcRoot = obj:FindFirstChild("HumanoidRootPart") or
+                            obj:FindFirstChildWhichIsA("BasePart")
+            local dist = 0
+            if myRoot and npcRoot then
+                dist = (myRoot.Position - npcRoot.Position).Magnitude
+            end
+
+            local ft = npcFillTrans(dist)
+
+            local hl = Instance.new("Highlight")
+            hl.FillColor           = Color3.fromRGB(215, 45, 45)
+            hl.OutlineColor        = Color3.fromRGB(255, 75, 75)
+            hl.FillTransparency    = ft
+            hl.OutlineTransparency = math.max(0, ft - 0.12)
+            hl.Adornee             = obj
+            hl.Parent              = obj
+            table.insert(espHL.npcs, hl)
+        end
+    end
+end
+
+local function updateItemESP()
+    clearESP("items")
+    if not espItemsOn then return end
+    local seen = {}
+
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if seen[obj] then continue end
+        if nameInListFuzzy(obj.Name, ITEM_NAMES) then
+            local adornee = nil
+            if obj:IsA("BasePart") then adornee = obj
+            elseif obj:IsA("Model") then adornee = obj end
+            if adornee and not seen[adornee] then
+                seen[adornee] = true
+                local hl = Instance.new("Highlight")
+                hl.FillColor           = Color3.fromRGB(45, 195, 75)
+                hl.OutlineColor        = Color3.fromRGB(75, 255, 100)
+                hl.FillTransparency    = 0.30
+                hl.OutlineTransparency = 0
+                hl.Adornee             = adornee
+                hl.Parent              = adornee
+                table.insert(espHL.items, hl)
+            end
+        end
+    end
+end
+
+local function updateExitESP()
+    clearESP("exits")
+    if not espExitOn then return end
+    local elevRoom = workspace:FindFirstChild("ElevatorRoom1")
+    if not elevRoom then return end
+
+    for _, obj in ipairs(elevRoom:GetChildren()) do
+        if obj:IsA("BasePart") or obj:IsA("Model") then
+            local hl = Instance.new("Highlight")
+            hl.FillColor           = Color3.fromRGB(45, 215, 100)
+            hl.OutlineColor        = Color3.fromRGB(75, 255, 130)
+            hl.FillTransparency    = 0.32
+            hl.OutlineTransparency = 0
+            hl.Adornee             = obj
+            hl.Parent              = obj
+            table.insert(espHL.exits, hl)
+        end
+    end
+end
+
+-- ESP toggles
+espPlayerBtn.MouseButton1Click:Connect(function()
+    espPlayerOn = not espPlayerOn
+    applyToggleVisual(espPlayerBtn, espPlayerOn)
+    if not espPlayerOn then clearESP("players") end
+end)
+
+espNPCBtn.MouseButton1Click:Connect(function()
+    espNPCOn = not espNPCOn
+    applyToggleVisual(espNPCBtn, espNPCOn)
+    if not espNPCOn then clearESP("npcs") end
+end)
+
+espItemsBtn.MouseButton1Click:Connect(function()
+    espItemsOn = not espItemsOn
+    applyToggleVisual(espItemsBtn, espItemsOn)
+    if not espItemsOn then clearESP("items") end
+end)
+
+espExitBtn.MouseButton1Click:Connect(function()
+    espExitOn = not espExitOn
+    applyToggleVisual(espExitBtn, espExitOn)
+    if not espExitOn then clearESP("exits") end
+end)
+
+-- ─── Optimized ESP loop — staggered updates to prevent frame spikes ───
+-- Each category updates in its own mini-slice instead of all at once.
+-- Player ESP refreshes every ~1.2s; heavier scans (NPC/Items/Exit) every ~2s.
+task.spawn(function()
+    local tick2 = 0
+    while true do
+        tick2 = tick2 + 1
+
+        if espPlayerOn then
+            updatePlayerESP()
+            task.wait(0.05)
+        end
+
+        if tick2 % 2 == 0 then
+            if espNPCOn   then updateNPCESP();   task.wait(0.05) end
+            if espItemsOn then updateItemESP();  task.wait(0.05) end
+            if espExitOn  then updateExitESP();  task.wait(0.05) end
+        end
+
+        task.wait(1.2)
+    end
+end)
+
+-- ═══════════════════════════════════════════════════════
+-- ANTI DEATH SECTION  (pinned at bottom of menu)
+-- ═══════════════════════════════════════════════════════
+
+local adSection = Instance.new("Frame")
+adSection.Size             = UDim2.new(1, -24, 0, 72)
+adSection.Position         = UDim2.new(0, 12, 1, -84)
+adSection.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
+adSection.BorderSizePixel  = 0
+adSection.ZIndex           = 5
+adSection.Parent           = mainMenu
+Instance.new("UICorner", adSection).CornerRadius = UDim.new(0, 8)
+local adStroke = Instance.new("UIStroke", adSection)
+adStroke.Color     = Color3.fromRGB(50, 50, 62)
+adStroke.Thickness = 1
+
+local adLabel = Instance.new("TextLabel")
+adLabel.Size               = UDim2.new(0.55, 0, 0, 36)
+adLabel.Position           = UDim2.new(0, 12, 0, 4)
+adLabel.BackgroundTransparency = 1
+adLabel.Text               = "Anti Death"
+adLabel.TextColor3         = COL_TXT
+adLabel.TextSize           = 13
+adLabel.Font               = Enum.Font.GothamSemibold
+adLabel.TextXAlignment     = Enum.TextXAlignment.Left
+adLabel.ZIndex             = 6
+adLabel.Parent             = adSection
+
+local antiDeathOn = false
+local adToggle = Instance.new("TextButton")
+adToggle.Size             = UDim2.new(0, 56, 0, 26)
+adToggle.Position         = UDim2.new(1, -64, 0, 10)
+adToggle.BackgroundColor3 = COL_OFF
+adToggle.Text             = "OFF"
+adToggle.TextColor3       = Color3.fromRGB(180, 180, 192)
+adToggle.TextSize         = 12
+adToggle.Font             = Enum.Font.GothamBold
+adToggle.BorderSizePixel  = 0
+adToggle.ZIndex           = 6
+adToggle.Parent           = adSection
+Instance.new("UICorner", adToggle).CornerRadius = UDim.new(0, 6)
+
+adToggle.MouseButton1Click:Connect(function()
+    antiDeathOn = not antiDeathOn
+    applyToggleVisual(adToggle, antiDeathOn)
+end)
+
+local tpRowLabel = Instance.new("TextLabel")
+tpRowLabel.Size               = UDim2.new(0.55, 0, 0, 26)
+tpRowLabel.Position           = UDim2.new(0, 12, 0, 42)
+tpRowLabel.BackgroundTransparency = 1
+tpRowLabel.Text               = "TP at HP ≤"
+tpRowLabel.TextColor3         = COL_DIM
+tpRowLabel.TextSize           = 11
+tpRowLabel.Font               = Enum.Font.Gotham
+tpRowLabel.TextXAlignment     = Enum.TextXAlignment.Left
+tpRowLabel.ZIndex             = 6
+tpRowLabel.Parent             = adSection
+
+local tpThreshold = 20
+local tpInput = Instance.new("TextBox")
+tpInput.Size             = UDim2.new(0, 76, 0, 22)
+tpInput.Position         = UDim2.new(1, -86, 0, 46)
+tpInput.BackgroundColor3 = Color3.fromRGB(28, 28, 36)
+tpInput.Text             = "20"
+tpInput.TextColor3       = Color3.fromRGB(220, 220, 232)
+tpInput.TextSize         = 11
+tpInput.Font             = Enum.Font.Gotham
+tpInput.ClearTextOnFocus = false
+tpInput.BorderSizePixel  = 0
+tpInput.PlaceholderText  = "HP"
+tpInput.ZIndex           = 6
+tpInput.Parent           = adSection
+Instance.new("UICorner", tpInput).CornerRadius = UDim.new(0, 5)
+local tpStroke = Instance.new("UIStroke", tpInput)
+tpStroke.Color     = Color3.fromRGB(55, 55, 70)
+tpStroke.Thickness = 1
+
+tpInput.FocusLost:Connect(function()
+    local v = tonumber(tpInput.Text)
+    if v then tpThreshold = v
+    else tpInput.Text = tostring(tpThreshold) end
+end)
+
+-- ─── Combined HP monitor loop (Anti Death + Easy Mode HP trigger) ─────
+task.spawn(function()
+    while true do
+        task.wait(0.1)
+        local char = player.Character
+        if char then
+            local hum  = char:FindFirstChild("Humanoid")
+            local root = char:FindFirstChild("HumanoidRootPart")
+            if hum and root and hum.Health > 0 then
+                if antiDeathOn and hum.Health <= tpThreshold then
+                    pcall(function() root.CFrame = CFrame.new(SAFE_POS) end)
+                elseif easyModeOn and easyModeHPThreshold > 0
+                       and hum.Health <= easyModeHPThreshold then
+                    pcall(function() root.CFrame = CFrame.new(SAFE_POS) end)
+                end
+            end
+        end
+    end
+end)
+
+-- ═══════════════════════════════════════════════════════
+-- TAB SWITCHING
+-- ═══════════════════════════════════════════════════════
+
+local function switchTab(tab)
+    local isAF = (tab == "af")
+    afPanel.Visible  = isAF
+    espPanel.Visible = not isAF
+
+    tabAutoFarm.BackgroundColor3 = isAF
+        and Color3.fromRGB(40, 40, 52) or Color3.fromRGB(28, 28, 38)
+    tabAutoFarm.TextColor3 = isAF
+        and Color3.fromRGB(225, 225, 235) or Color3.fromRGB(145, 145, 158)
+
+    tabESP.BackgroundColor3 = not isAF
+        and Color3.fromRGB(40, 40, 52) or Color3.fromRGB(28, 28, 38)
+    tabESP.TextColor3 = not isAF
+        and Color3.fromRGB(225, 225, 235) or Color3.fromRGB(145, 145, 158)
+end
+
+tabAutoFarm.MouseButton1Click:Connect(function() switchTab("af")  end)
+tabESP.MouseButton1Click:Connect(function()      switchTab("esp") end)
+switchTab("af")
+
+-- ═══════════════════════════════════════════════════════
+-- TOGGLE BUTTON — open/close menu (tap or keybind B)
+-- ═══════════════════════════════════════════════════════
+
+local menuOpen     = false
+local tbDragOrigin = nil
+local tbDragMoved  = false
+
+toggleBtn.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or
+       input.UserInputType == Enum.UserInputType.Touch then
+        tbDragOrigin = input.Position
+        tbDragMoved  = false
+    end
+end)
+
+toggleBtn.InputChanged:Connect(function(input)
+    if tbDragOrigin and (
+        input.UserInputType == Enum.UserInputType.MouseMovement or
+        input.UserInputType == Enum.UserInputType.Touch
+    ) then
+        if (input.Position - tbDragOrigin).Magnitude > 6 then
+            tbDragMoved = true
+        end
+    end
+end)
+
+toggleBtn.MouseButton1Click:Connect(function()
+    if not tbDragMoved then
+        menuOpen = not menuOpen
+        mainMenu.Visible = menuOpen
+    end
+end)
+
+UserInputService.InputBegan:Connect(function(input, processed)
+    if processed then return end
+    if input.KeyCode == Enum.KeyCode.B then
+        menuOpen = not menuOpen
+        mainMenu.Visible = menuOpen
+    end
+end)
+
+-- ═══════════════════════════════════════════════════════
+-- CHARACTER RESPAWN
+-- ═══════════════════════════════════════════════════════
+
+player.CharacterAdded:Connect(function(newChar)
+    character  = newChar
+    task.wait(0.5)
+    hrp        = character:FindFirstChild("HumanoidRootPart")
+    lastPos    = nil
+    stuckSince = nil
+    if autoFarmOn then
+        stuckItems = {}
+        startFarming()
+    end
+    if easyModeOn then
+        task.wait(0.5)
+        setupEasyModeParts()
+    end
+end)
